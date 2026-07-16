@@ -25,7 +25,6 @@ function Inbox() {
       const engine = getEngine();
       const all = await engine.db.messages.toArray();
       const received = all.filter((m: Message) => m.recipientId === engine.getNodeId());
-      const received = all.filter((m: Message) => m.status === 'delivered' || m.senderId !== engine.getNodeId());
       setMessages(received.slice(-20).reverse());
     } catch {
       // db not ready yet

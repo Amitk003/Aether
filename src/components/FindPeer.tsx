@@ -8,13 +8,11 @@ function FindPeer() {
   const [isScanning, setIsScanning] = useState(false);
   const [peers, setPeers] = useState<string[]>([]);
 
-  // Sync state
   const [syncPeerId, setSyncPeerId] = useState<string | null>(null);
   const [syncStep, setSyncStep] = useState<'handshake' | 'payload'>('handshake');
   const [ownHandshakeData, setOwnHandshakeData] = useState('');
-  
+
   const [outgoingQrData, setOutgoingQrData] = useState<string | null>(null);
-  const [outgoingQrData, setOutgoingQrData] = useState('');
   const [outgoingChunkInfo, setOutgoingChunkInfo] = useState('');
   const [incomingProgress, setIncomingProgress] = useState('Waiting to scan...');
 
@@ -48,24 +46,22 @@ function FindPeer() {
     const engine = getEngine();
     engine.stopDiscovery();
     setIsScanning(false);
-    
+
     setSyncPeerId(peerId);
     setSyncStep('handshake');
     setOutgoingQrData(null);
     setIncomingProgress('Scan peer handshake QR...');
-    
-    // 1. Prepare handshake QR
+
     const handshake = await engine.getHandshakePayload();
     setOwnHandshakeData(handshake);
-    
-    // 2. Set up receiver callbacks once
+
     engine.optical.setOnChunk((received, total, progress) => {
-      setIncomingProgress(`Scanning payload chunks: ${received}/${total} (${Math.round(progress * 100)}%)`);
+      setIncomingProgress('Scanning payload chunks: ' + received + '/' + total + ' (' + Math.round(progress * 100) + '%)');
     });
 
     engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
       try {
-        setIncomingProgress('Reconstructing & decrypting messages...');
+        setIncomingProgress('Reconstructing and decrypting messages...');
         await engine.processIncomingPayload(peerId, payloadBytes);
         alert('Sync completed successfully!');
       } catch (err: any) {
@@ -74,68 +70,33 @@ function FindPeer() {
         handleCancelSync();
       }
     });
-    
-    // 3. Transition phase
+
     engine.setPhase('transferring');
-    
-    // 4. Start optical receiver
-    // 2. Transition phase
-    engine.setPhase('transferring');
-    
-    // 3. Start optical receiver
     engine.optical.startReceiving();
   };
 
   const handleScan = async (scannedText: string) => {
     const engine = getEngine();
-    
+
     if (syncStep === 'handshake') {
       try {
-        // Register peer public key & seen message list
         const peerHandshake = await engine.registerPeerHandshake(scannedText);
-        
-        // Transition to payload transfer step
+
         setSyncStep('payload');
         setIncomingProgress('Handshake OK. Align screens for payload transfer...');
-        setIncomingProgress('Handshake OK. Scanning message chunks...');
-        
-        // Generate outgoing encrypted payloads for them
+
         const outPayload = engine.generateOutgoingPayload(peerHandshake.seenMessageIds);
-        
-        // Always wire up the transmitter and start sending the carousel, even if the payload is empty ("[]").
-        // This is required because the peer's camera receiver expects to receive at least one packet
-        // to trigger its complete callback and conclude the sync session. Skipping this would deadlock the peer.
+
         engine.optical.setOnFrame((qrData, chunk) => {
           setOutgoingQrData(qrData);
           setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
-        // Wire up transmitter and start sending carousel
-        engine.optical.setOnFrame((qrData, chunk) => {
-          setOutgoingQrData(qrData);
-          setOutgoingChunkInfo(`Sending chunk ${chunk.index + 1}/${chunk.total}`);
         });
-        
+
         engine.optical.startSending(outPayload);
       } catch (err: any) {
         console.error('Handshake scan error:', err);
       }
     } else {
-      // Step 2: Feed scanned chunk to optical receiver
-      engine.optical.setOnChunk((received, total, progress) => {
-        setIncomingProgress(`Scanning payload chunks: ${received}/${total} (${Math.round(progress * 100)}%)`);
-      });
-
-      engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
-        try {
-          setIncomingProgress('Reconstructing & decrypting messages...');
-          await engine.processIncomingPayload(syncPeerId!, payloadBytes);
-          alert('Sync completed successfully!');
-        } catch (err: any) {
-          alert(`Sync processing failed: ${err.message}`);
-        } finally {
-          handleCancelSync();
-        }
-      });
-
       engine.optical.submitFrame(scannedText);
     }
   };
@@ -146,12 +107,10 @@ function FindPeer() {
     engine.setPhase('idle');
     setSyncPeerId(null);
     setOutgoingQrData(null);
-    setOutgoingQrData('');
     setOutgoingChunkInfo('');
     setIncomingProgress('Waiting to scan...');
   };
 
-  // Render the active Optical Transfer / Sync screen
   if (state.phase === 'transferring' && syncPeerId) {
     return (
       <div>
@@ -160,20 +119,18 @@ function FindPeer() {
         </h2>
 
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
-          
-          {/* Display Step information */}
+
           <div style={{ textAlign: 'center', width: '100%' }}>
             <span style={{ backgroundColor: 'var(--accent-dim)', color: 'var(--accent)', padding: '4px 12px', borderRadius: '4px', fontSize: '0.8rem', textTransform: 'uppercase', fontWeight: 600 }}>
               Step: {syncStep === 'handshake' ? '1. Swap Handshakes' : '2. Transfer Payloads'}
             </span>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '10px' }}>
-              {syncStep === 'handshake' 
+              {syncStep === 'handshake'
                 ? 'Align screens to swap Node identities and handshake credentials.'
                 : 'Exchanging encrypted pending messages.'}
             </p>
           </div>
 
-          {/* Left Section: QR Display (Our Transmission) */}
           <div className="card" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: 'var(--bg-tertiary)' }}>
             <p style={{ color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
               Your Screen (Show to peer)
@@ -186,15 +143,12 @@ function FindPeer() {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 {outgoingChunkInfo || 'Preparing payload...'}
               </p>
-            ) : (
-              <QrDisplay data={outgoingQrData} label={outgoingChunkInfo || "Your Outgoing Payload"} />
             )}
           </div>
 
-          {/* Right Section: Camera Scanner (Inbound Stream) */}
           <div className="card" style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', backgroundColor: 'var(--bg-tertiary)' }}>
             <p style={{ color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
-              Your Camera (Scan peer's screen)
+              Your Camera (Scan peer screen)
             </p>
             <div style={{ width: '100%', maxWidth: '280px' }}>
               <QrScanner active={true} onScan={handleScan} />
