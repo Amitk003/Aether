@@ -2,9 +2,10 @@ import { AetherDB } from './db';
 import { AcousticService } from './acoustic';
 import { OpticalService } from './optical';
 import { RoutingEngine } from './routing';
-import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret, encryptMessage, decryptMessage } from './crypto';
+import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret, encryptMessage, decryptMessage, computeFingerprint } from './crypto';
 import type { AppState, AppPhase, DiagnosticsData } from '../types/engine';
 import type { ExchangeAction } from '../types/routing';
+import type { Node } from '../types/db';
 
 export type StateListener = (state: AppState) => void;
 export type PeerListener = (peerId: string) => void;
@@ -31,6 +32,9 @@ export class AetherEngine {
     totalMessagesSent: 0,
     totalMessagesReceived: 0,
     peersEncountered: 0,
+    chunksSent: 0,
+    chunksReceived: 0,
+    transfersCompleted: 0,
   };
 
   constructor() {
@@ -71,11 +75,11 @@ export class AetherEngine {
       this.handlePeerDiscovered(msg.nodeId);
     });
 
-    this.db.upsertNode({
+    await this.db.upsertNode({
       id: this.nodeId,
       publicKey: await exportPublicKey(this.keyPair.publicKey),
       trustStatus: 'trusted',
-      deliveryPredictability: {},
+      deliveryPredictability: this.routing.getAllPredictability(),
       lastSeen: Date.now(),
     });
 
@@ -203,6 +207,7 @@ export class AetherEngine {
       nodeId: this.nodeId,
       publicKey: pubJwk,
       seenMessageIds: summary.seenMessageIds,
+      predictability: summary.predictability,
     });
   }
 
@@ -215,11 +220,17 @@ export class AetherEngine {
     }
 
     this.stats.peersEncountered++;
+
+    this.routing.recordEncounter(data.nodeId);
+    if (data.predictability) {
+      this.routing.applyTransitivity(data.nodeId, data.predictability);
+    }
+
     await this.db.upsertNode({
       id: data.nodeId,
       publicKey: data.publicKey,
       trustStatus: 'trusted',
-      deliveryPredictability: {},
+      deliveryPredictability: this.routing.getAllPredictability(),
       lastSeen: Date.now(),
     });
 
@@ -310,6 +321,39 @@ export class AetherEngine {
     return this.keyPair.publicKey as unknown as JsonWebKey;
   }
 
+  getSpectrumData(): Float32Array | null {
+    return this.acoustic.getFrequencyData();
+  }
+
+  trackChunkSent(): void {
+    this.stats.chunksSent++;
+  }
+
+  trackChunkReceived(): void {
+    this.stats.chunksReceived++;
+  }
+
+  trackTransferComplete(): void {
+    this.stats.transfersCompleted++;
+  }
+
+  async getFingerprint(): Promise<string> {
+    const pubJwk = await exportPublicKey(this.keyPair!.publicKey);
+    return computeFingerprint(pubJwk);
+  }
+
+  async getAllPeers(): Promise<Node[]> {
+    return this.db.getAllNodes();
+  }
+
+  async setTrustStatus(peerId: string, status: 'trusted' | 'untrusted' | 'blocked'): Promise<void> {
+    const node = await this.db.getNode(peerId);
+    if (!node) throw new Error('Unknown peer: ' + peerId);
+    node.trustStatus = status;
+    await this.db.upsertNode(node);
+    this.notifyState();
+  }
+
   destroy(): void {
     this.acoustic.destroy();
     this.optical.destroy();
@@ -326,6 +370,14 @@ export class AetherEngine {
   private async handlePeerDiscovered(peerId: string): Promise<void> {
     this.stats.peersEncountered++;
     this.knownPeers.add(peerId);
+    this.routing.recordEncounter(peerId);
+    await this.db.upsertNode({
+      id: peerId,
+      publicKey: {} as JsonWebKey,
+      trustStatus: 'trusted',
+      deliveryPredictability: this.routing.getAllPredictability(),
+      lastSeen: Date.now(),
+    });
     this.peerListeners.forEach((l) => l(peerId));
     this.notifyState();
   }
@@ -339,6 +391,9 @@ export class AetherEngine {
       totalMessagesSent: this.stats.totalMessagesSent,
       totalMessagesReceived: this.stats.totalMessagesReceived,
       peersEncountered: this.stats.peersEncountered,
+      chunksSent: this.stats.chunksSent,
+      chunksReceived: this.stats.chunksReceived,
+      transfersCompleted: this.stats.transfersCompleted,
     };
   }
 }

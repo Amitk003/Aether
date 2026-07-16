@@ -9,6 +9,7 @@ export interface OutgoingMessage {
 export interface ExchangeSummary {
   nodeId: string;
   seenMessageIds: string[];
+  predictability: Record<string, number>;
 }
 
 export interface ExchangeAction {

@@ -46,6 +46,7 @@ export class AudioReceiver {
     this.source = this.ctx.createMediaStreamSource(this.stream);
     this.analyser = this.ctx.createAnalyser();
     this.analyser.fftSize = config.fftSize;
+    this.analyser.smoothingTimeConstant = 0.8;
     this.source.connect(this.analyser);
 
     this.staticBuffer = new Float32Array(this.analyser.frequencyBinCount * this.BUFFER_TARGET);
@@ -158,6 +159,13 @@ export class AudioReceiver {
         }
       }
     }
+  }
+
+  getFrequencyData(): Float32Array | null {
+    if (!this.analyser) return null;
+    const data = new Float32Array(this.analyser.frequencyBinCount);
+    this.analyser.getFloatFrequencyData(data);
+    return data;
   }
 
   private finalizeBeacon(): void {

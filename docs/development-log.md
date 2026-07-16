@@ -327,3 +327,20 @@ Actions taken:
 - Removed global `db` export from `src/utils/db.ts`.
 - Combined imports in `Diagnostics.tsx` and refactored template strings in `engine.ts`.
 - Verified tsc build and all 45 unit tests pass cleanly.
+
+## prophet-routing branch
+
+- Implemented PRoPHET (Probabilistic Routing Protocol using History of Encounters and Transitivity):
+  - Direct encounters record: Increments predictability score $P(A, B)$ using $P_{encounter\_init} = 0.5$ capped at $0.75$.
+  - Aging decay: Predictability decays exponentially over time using decay factor $\gamma = 0.98$ per minute.
+  - Transitivity update: Exchanged predictability tables update transitive paths using transit factor $\beta = 0.25$.
+  - Queue prioritization: Pending outbox messages are sorted and transmitted descending by the target recipient's predictability score.
+  - Wrote 8 unit tests in `routing.test.ts` covering direct encounter, aging decay, and transitive updates.
+- Implemented Web of Trust (WoT):
+  - Added cryptographic identity fingerprinting (SHA-256 hash of public JWK parameters).
+  - Created `Trust.tsx` tab showing own fingerprint QR and list of known peers with trust statuses (`trusted`, `untrusted`).
+- Implemented Live Diagnostics Visualizer:
+  - Added `Audio Spectrum` visualizer rendering real-time microphone frequency data on a HTML5 Canvas in `Diagnostics.tsx`.
+  - Added live `Routing Predictability` table displaying current peer probability scores.
+  - Tracked and visualised QR Transfer statistics (chunks sent/received, completed transfers).
+  - Verified: All 53 unit tests pass, tsc build compiles cleanly.
