@@ -72,7 +72,9 @@ function Inbox() {
             </span>
           </div>
           <p style={{ color: 'var(--text-primary)', fontSize: '0.9rem', wordBreak: 'break-word' }}>
-            {msg.payload.byteLength > 0 ? '[Encrypted message]' : ''}
+            {msg.status === 'delivered'
+              ? new TextDecoder().decode(new Uint8Array(msg.payload))
+              : '[Encrypted message]'}
           </p>
           <div style={{ marginTop: '8px' }}>
             <span style={{

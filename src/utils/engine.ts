@@ -4,6 +4,7 @@ import { OpticalService } from './optical';
 import { RoutingEngine } from './routing';
 import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret, encryptMessage, decryptMessage } from './crypto';
 import type { AppState, AppPhase, DiagnosticsData } from '../types/engine';
+import type { ExchangeAction } from '../types/routing';
 
 export type StateListener = (state: AppState) => void;
 export type PeerListener = (peerId: string) => void;
@@ -21,6 +22,9 @@ export class AetherEngine {
   private listeners: StateListener[] = [];
   private peerListeners: PeerListener[] = [];
   private messageListeners: MessageListener[] = [];
+
+  private micPermission = false;
+  private cameraPermission = false;
 
   private stats = {
     totalMessagesSent: 0,
@@ -80,11 +84,13 @@ export class AetherEngine {
   async startDiscovery(): Promise<void> {
     this.setPhase('discovering');
 
-    await this.acoustic.startListening();
-
-    const hasMic = await this.checkMicPermission();
-    if (hasMic) {
+    try {
+      await this.acoustic.startListening();
+      this.micPermission = true;
       await this.acoustic.startBeaconing();
+    } catch (err) {
+      console.warn('Microphone permission denied or device not supported:', err);
+      this.micPermission = false;
     }
   }
 
@@ -92,6 +98,11 @@ export class AetherEngine {
     this.acoustic.stopAll();
     this.optical.stopAll();
     this.setPhase('idle');
+  }
+
+  setCameraPermission(granted: boolean): void {
+    this.cameraPermission = granted;
+    this.notifyState();
   }
 
   async sendMessage(peerId: string, text: string): Promise<string> {
@@ -184,23 +195,88 @@ export class AetherEngine {
     }
   }
 
-  async syncWithPeer(peerId: string): Promise<void> {
-    this.setPhase('transferring');
+  async getHandshakePayload(): Promise<string> {
+    const pubJwk = await exportPublicKey(this.keyPair!.publicKey);
+    const summary = this.routing.getSummary(this.nodeId);
+    return JSON.stringify({
+      nodeId: this.nodeId,
+      publicKey: pubJwk,
+      seenMessageIds: summary.seenMessageIds,
+    });
+  }
 
-    this.setPhase('resolving');
+  async registerPeerHandshake(
+    scannedText: string
+  ): Promise<{ nodeId: string; seenMessageIds: string[] }> {
+    const data = JSON.parse(scannedText);
+    if (!data.nodeId || !data.publicKey || !data.seenMessageIds) {
+      throw new Error('Invalid handshake QR payload');
+    }
 
-    this.routing.markSeen(peerId);
     this.stats.peersEncountered++;
-
     await this.db.upsertNode({
-      id: peerId,
-      publicKey: {} as JsonWebKey,
-      trustStatus: 'untrusted',
+      id: data.nodeId,
+      publicKey: data.publicKey,
+      trustStatus: 'trusted',
       deliveryPredictability: {},
       lastSeen: Date.now(),
     });
 
-    this.setPhase('idle');
+    this.notifyState();
+    return {
+      nodeId: data.nodeId,
+      seenMessageIds: data.seenMessageIds,
+    };
+  }
+
+  async processIncomingPayload(peerId: string, payloadBytes: Uint8Array): Promise<void> {
+    const payloadText = new TextDecoder().decode(payloadBytes);
+    const actions: ExchangeAction[] = JSON.parse(payloadText);
+
+    // Process through the epidemic routing engine
+    const { received, forward } = this.routing.receiveFromPeer(actions, this.nodeId);
+
+    // 1. Process received messages addressed to us (Decrypt and write to Inbox store)
+    for (const action of received) {
+      const iv = action.payload.subarray(0, 12);
+      const encryptedPayload = action.payload.subarray(12);
+      await this.receiveMessage(peerId, encryptedPayload, iv);
+    }
+
+    // 2. Process forward messages addressed to others (Save to routing queue as pending)
+    for (const action of forward) {
+      const iv = action.payload.subarray(0, 12);
+      await this.db.saveMessage({
+        id: action.messageId,
+        senderId: peerId,
+        recipientId: action.recipientId,
+        payload: action.payload.buffer as ArrayBuffer,
+        ttl: Date.now() + 86400000,
+        status: 'pending',
+        createdAt: Date.now(),
+        iv,
+      });
+    }
+
+    this.notifyState();
+  }
+
+  generateOutgoingPayload(peerSeenIds: string[]): Uint8Array {
+    const peerSeen = new Set(peerSeenIds);
+    const actions = this.routing.getOutgoingForPeer(peerSeen);
+    
+    // Mark these as delivered in our local outbox so we don't try to send them again
+    for (const action of actions) {
+      this.routing.confirmDelivered(action.messageId);
+      this.db.markDelivered(action.messageId).catch(() => {});
+    }
+
+    const payloadText = JSON.stringify(actions);
+    return new TextEncoder().encode(payloadText);
+  }
+
+  setPhase(phase: AppPhase): void {
+    this.phase = phase;
     this.notifyState();
   }
 
@@ -232,11 +308,6 @@ export class AetherEngine {
     this.messageListeners = [];
   }
 
-  private setPhase(phase: AppPhase): void {
-    this.phase = phase;
-    this.notifyState();
-  }
-
   private notifyState(): void {
     const state = this.getState();
     this.listeners.forEach((l) => l(state));
@@ -248,22 +319,12 @@ export class AetherEngine {
     this.notifyState();
   }
 
-  private async checkMicPermission(): Promise<boolean> {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   private getDiagnostics(): DiagnosticsData {
     return {
       dbReady: true,
       cryptoReady: this.keyPair !== null,
-      micPermission: false,
-      cameraPermission: false,
+      micPermission: this.micPermission,
+      cameraPermission: this.cameraPermission,
       totalMessagesSent: this.stats.totalMessagesSent,
       totalMessagesReceived: this.stats.totalMessagesReceived,
       peersEncountered: this.stats.peersEncountered,

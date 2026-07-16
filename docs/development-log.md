@@ -236,3 +236,19 @@ Actions taken:
 - Refactored `RoutingEngine` in `src/utils/routing.ts` to return both `received` and `forward` messages, and removed `applySummary()`.
 - Updated unit tests in `src/utils/routing.test.ts` to assert on the new object return types and test the correct anti-entropy flow.
 - Verified all 45 unit tests and production builds pass.
+
+### Code review fixes - Part 9
+
+Issues found and fixed during code review:
+
+1. Omitted QR Code Components: `QrDisplay` and `QrScanner` were previously created but never imported or rendered in the application. The `syncWithPeer` method was just a dummy stub. Fixed by fully integrating `QrDisplay` and `QrScanner` into `FindPeer.tsx` to handle the multi-stage optical QR handshake and payload synchronization.
+2. Blank Public Key Crash: The dummy sync stub upserted the peer node into the database with a blank public key `{}`, causing `sendMessage()` to throw `DOMException` and crash when trying to import it. Fixed by implementing `registerPeerHandshake()` in `AetherEngine` which parses the peer's actual public key from their scanned handshake QR code and saves it to the database.
+3. Inbox Plaintext Decoding Shortcut: The Inbox component originally rendered the hardcoded text `[Encrypted message]` for all items. Fixed by using `new TextDecoder().decode(new Uint8Array(msg.payload))` to correctly decode and render successfully decrypted plaintext messages.
+4. Hardcoded Permissions Status: Camera and microphone permission statuses in the diagnostics metadata were hardcoded to `false`. Fixed by dynamically tracking and updating them in `AetherEngine` on permission grant events.
+
+Actions taken:
+- Refactored `AetherEngine` in `src/utils/engine.ts` to implement the handshake payload generation, handshake registration, outgoing payload generation, and incoming payload processing.
+- Refactored `FindPeer.tsx` to mount `QrDisplay` and `QrScanner` and drive the two-step optical sync workflow.
+- Updated `QrScanner.tsx` to notify `AetherEngine` of camera permission updates dynamically.
+- Updated `Inbox.tsx` to decode plaintext payloads.
+- Verified tsc build and all 45 unit tests pass cleanly.
