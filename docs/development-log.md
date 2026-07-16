@@ -147,6 +147,33 @@ Actions taken:
 - Verified tsc and vite build pass
 - Note: wirehair-wasm is NOT included (Windows postinstall uses rm -rf). Using pure-JS LT code fallback if needed.
 
-## Next: optical-basics branch
+## optical-basics branch
 
-Will implement chunk-carousel QR transfer for message payloads.
+- Implemented chunk carousel QR transfer for optical data link
+- Created src/utils/chunker.ts: split/reconstruct payloads with XOR checksum
+- Created src/types/optical.ts: DataChunk, TransferSession, OpticalConfig
+- Created src/utils/optical-tx.ts: OpticalTransmitter with frame interval
+- Created src/utils/optical-rx.ts: OpticalReceiver with dedup and progress
+- Created src/utils/optical.ts: High-level service
+- Created src/components/QrDisplay.tsx: QR canvas renderer
+- Created src/components/QrScanner.tsx: Camera scanner
+- Added @types/qrcode, html5-qrcode type declarations
+- Wrote 9 chunker tests (all passing)
+
+## crypto branch
+
+- Implemented end-to-end encryption using Web Crypto API
+  - ECC key pair generation (ECDH P-256)
+  - JWK export/import for public and private keys
+  - ECDH shared secret derivation
+  - HKDF-SHA256 key derivation for AES-256-GCM
+  - Authenticated encryption/decryption
+- Created src/types/crypto.ts: EncryptedMessage, KeyPair, IdentityKeys
+- Created src/utils/crypto.ts: generateKeyPair, exportPublicKey, importPublicKey, exportPrivateKey, importPrivateKey, deriveSharedSecret, encryptMessage, decryptMessage
+- Wrote 9 tests: key gen, export/import, matching shared secrets, round-trip, non-deterministic IV, wrong key rejection, tampered ciphertext rejection, large message (10KB), re-imported public key round-trip
+- All tests pass (including 6+9+9 from all modules running on main)
+- Verified tsc and vite build pass
+
+## Next: routing branch
+
+Will implement epidemic flooding with a seen-message blacklist.
