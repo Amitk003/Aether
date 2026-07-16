@@ -268,3 +268,17 @@ Issues found and fixed during code review:
 Actions taken:
 - Removed the dead `outPayload.length === 0` check in `FindPeer.tsx` and added a comment warning future developers about the handshake deadlock constraint.
 - Verified tsc build and all 45 unit tests pass cleanly.
+
+### Code review fixes - Part 12
+
+Issues found and fixed during code review:
+
+1. Transitive Message Leak in Inbox: The Inbox component filtered messages using `m.status === 'delivered' || m.senderId !== engine.getNodeId()`. In epidemic routing, this meant any message forwarded transitively through this node (where we are not the sender) would leak into our local Inbox view. Fixed by strictly filtering to `m.recipientId === engine.getNodeId()`.
+2. Premature Delivery Confirmation: `generateOutgoingPayload()` immediately called `confirmDelivered()` and deleted the message from our outbox *before* it was scanned. If the transfer failed or was cancelled, the message was permanently lost. Fixed by removing the premature cleanup so messages remain queued until actual sync completion.
+3. Inline Styling in Diagnostics: Refactored [Diagnostics.tsx](file:///C:/Users/amitk/Documents/Hackathons/Aether/src/components/Diagnostics.tsx) to replace remaining inline `styles` with clean CSS classes in `index.css`.
+
+Actions taken:
+- Updated `Inbox.tsx` message filter.
+- Removed outbox deletion inside `generateOutgoingPayload()` in `src/utils/engine.ts`.
+- Updated `Diagnostics.tsx` and `src/index.css` to use CSS classes.
+- Verified tsc build and all 45 unit tests pass cleanly.
