@@ -15,6 +15,16 @@ function Diagnostics() {
       </h2>
 
       <div className="card">
+        <p className="card-section-title">Node Identity</p>
+        <div className="section-row">
+          <span className="section-label">Node ID</span>
+          <span className="section-value" style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            {nodeId}
+          </span>
+        </div>
+        <div className="section-row">
+          <span className="section-label">Phase</span>
+          <span className="section-value" style={{ color: state.phase === 'idle' ? 'var(--text-secondary)' : 'var(--accent)' }}>
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           Node Identity
         </p>
@@ -33,6 +43,21 @@ function Diagnostics() {
       </div>
 
       <div className="card">
+        <p className="card-section-title">Module Status</p>
+        <div className="section-row">
+          <span className="section-label">Database</span>
+          <StatusBadge ok={d.dbReady} />
+        </div>
+        <div className="section-row">
+          <span className="section-label">Crypto Keys</span>
+          <StatusBadge ok={d.cryptoReady} />
+        </div>
+        <div className="section-row">
+          <span className="section-label">Microphone</span>
+          <StatusBadge ok={d.micPermission} />
+        </div>
+        <div className="section-row">
+          <span className="section-label">Camera</span>
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           Module Status
         </p>
@@ -55,6 +80,22 @@ function Diagnostics() {
       </div>
 
       <div className="card">
+        <p className="card-section-title">Statistics</p>
+        <div className="section-row">
+          <span className="section-label">Messages Sent</span>
+          <span className="section-value">{d.totalMessagesSent}</span>
+        </div>
+        <div className="section-row">
+          <span className="section-label">Messages Received</span>
+          <span className="section-value">{d.totalMessagesReceived}</span>
+        </div>
+        <div className="section-row">
+          <span className="section-label">Peers Encountered</span>
+          <span className="section-value">{d.peersEncountered}</span>
+        </div>
+        <div className="section-row">
+          <span className="section-label">Pending Outbox</span>
+          <span className="section-value">{state.pendingMessages}</span>
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           Statistics
         </p>
@@ -81,6 +122,7 @@ function Diagnostics() {
 
 function StatusBadge({ ok }: { ok: boolean }) {
   return (
+    <span className={'status-badge' + (ok ? ' status-badge-ok' : '')}>
     <span style={{
       fontSize: '0.7rem',
       padding: '2px 8px',

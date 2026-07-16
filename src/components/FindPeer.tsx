@@ -13,6 +13,7 @@ function FindPeer() {
   const [syncStep, setSyncStep] = useState<'handshake' | 'payload'>('handshake');
   const [ownHandshakeData, setOwnHandshakeData] = useState('');
   
+  const [outgoingQrData, setOutgoingQrData] = useState<string | null>(null);
   const [outgoingQrData, setOutgoingQrData] = useState('');
   const [outgoingChunkInfo, setOutgoingChunkInfo] = useState('');
   const [incomingProgress, setIncomingProgress] = useState('Waiting to scan...');
@@ -50,12 +51,34 @@ function FindPeer() {
     
     setSyncPeerId(peerId);
     setSyncStep('handshake');
+    setOutgoingQrData(null);
     setIncomingProgress('Scan peer handshake QR...');
     
     // 1. Prepare handshake QR
     const handshake = await engine.getHandshakePayload();
     setOwnHandshakeData(handshake);
     
+    // 2. Set up receiver callbacks once
+    engine.optical.setOnChunk((received, total, progress) => {
+      setIncomingProgress(`Scanning payload chunks: ${received}/${total} (${Math.round(progress * 100)}%)`);
+    });
+
+    engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
+      try {
+        setIncomingProgress('Reconstructing & decrypting messages...');
+        await engine.processIncomingPayload(peerId, payloadBytes);
+        alert('Sync completed successfully!');
+      } catch (err: any) {
+        alert('Sync processing failed: ' + err.message);
+      } finally {
+        handleCancelSync();
+      }
+    });
+    
+    // 3. Transition phase
+    engine.setPhase('transferring');
+    
+    // 4. Start optical receiver
     // 2. Transition phase
     engine.setPhase('transferring');
     
@@ -73,11 +96,18 @@ function FindPeer() {
         
         // Transition to payload transfer step
         setSyncStep('payload');
+        setIncomingProgress('Handshake OK. Align screens for payload transfer...');
         setIncomingProgress('Handshake OK. Scanning message chunks...');
         
         // Generate outgoing encrypted payloads for them
         const outPayload = engine.generateOutgoingPayload(peerHandshake.seenMessageIds);
         
+        // Always wire up the transmitter and start sending the carousel, even if the payload is empty ("[]").
+        // This is required because the peer's camera receiver expects to receive at least one packet
+        // to trigger its complete callback and conclude the sync session. Skipping this would deadlock the peer.
+        engine.optical.setOnFrame((qrData, chunk) => {
+          setOutgoingQrData(qrData);
+          setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
         // Wire up transmitter and start sending carousel
         engine.optical.setOnFrame((qrData, chunk) => {
           setOutgoingQrData(qrData);
@@ -115,6 +145,7 @@ function FindPeer() {
     engine.optical.stopAll();
     engine.setPhase('idle');
     setSyncPeerId(null);
+    setOutgoingQrData(null);
     setOutgoingQrData('');
     setOutgoingChunkInfo('');
     setIncomingProgress('Waiting to scan...');
@@ -149,6 +180,12 @@ function FindPeer() {
             </p>
             {syncStep === 'handshake' ? (
               <QrDisplay data={ownHandshakeData} label="Your Identity Handshake" />
+            ) : outgoingQrData ? (
+              <QrDisplay data={outgoingQrData} label={outgoingChunkInfo || 'Sending payload...'} />
+            ) : (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                {outgoingChunkInfo || 'Preparing payload...'}
+              </p>
             ) : (
               <QrDisplay data={outgoingQrData} label={outgoingChunkInfo || "Your Outgoing Payload"} />
             )}

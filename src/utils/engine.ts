@@ -23,6 +23,7 @@ export class AetherEngine {
   private peerListeners: PeerListener[] = [];
   private messageListeners: MessageListener[] = [];
 
+  private knownPeers = new Set<string>();
   private micPermission = false;
   private cameraPermission = false;
 
@@ -231,6 +232,15 @@ export class AetherEngine {
 
   async processIncomingPayload(peerId: string, payloadBytes: Uint8Array): Promise<void> {
     const payloadText = new TextDecoder().decode(payloadBytes);
+    let rawActions: any[];
+    try {
+      rawActions = JSON.parse(payloadText);
+      if (!Array.isArray(rawActions)) {
+        throw new Error('Payload is not an array');
+      }
+    } catch (err: any) {
+      throw new Error('Failed to parse incoming payload: ' + err.message);
+    }
     const rawActions: any[] = JSON.parse(payloadText);
 
     // Convert deserialized number[] payloads back to Uint8Array
@@ -292,6 +302,7 @@ export class AetherEngine {
       phase: this.phase,
       acousticState: this.acoustic.getState(),
       pendingMessages: this.routing.pendingCount,
+      knownPeers: Array.from(this.knownPeers),
       knownPeers: [],
       lastSync: null,
       diagnostics: this.getDiagnostics(),
@@ -322,6 +333,7 @@ export class AetherEngine {
 
   private async handlePeerDiscovered(peerId: string): Promise<void> {
     this.stats.peersEncountered++;
+    this.knownPeers.add(peerId);
     this.peerListeners.forEach((l) => l(peerId));
     this.notifyState();
   }

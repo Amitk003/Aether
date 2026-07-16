@@ -12,3 +12,6 @@ coverage/
 # Research documents - not part of the public codebase
 AETHER Implementation Roadmap.md
 First Contact Hackathon Idea Research.md
+
+# TypeScript incremental build info
+*.tsbuildinfo
