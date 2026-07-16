@@ -87,7 +87,11 @@ function FindPeer() {
         setSyncStep('payload');
         setIncomingProgress('Handshake OK. Align screens for payload transfer...');
 
-        const outPayload = engine.generateOutgoingPayload(peerHandshake.seenMessageIds);
+        const outPayload = engine.generateOutgoingPayload(
+          peerHandshake.seenMessageIds,
+          peerHandshake.nodeId,
+          peerHandshake.predictability
+        );
 
         engine.optical.setOnFrame((qrData, chunk) => {
           setOutgoingQrData(qrData);

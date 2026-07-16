@@ -344,3 +344,11 @@ Actions taken:
   - Added live `Routing Predictability` table displaying current peer probability scores.
   - Tracked and visualised QR Transfer statistics (chunks sent/received, completed transfers).
   - Verified: All 53 unit tests pass, tsc build compiles cleanly.
+- Implemented relative PRoPHET comparison filter:
+  - Pending outbox messages are only forwarded to the encountering peer if the peer's delivery predictability for the recipient is higher than ours ($P_{(peer, recipient)} > P_{(us, recipient)}$) or if the peer is the actual recipient.
+  - Falls back to standard epidemic flooding if no peer is specified.
+- Fixed Handshake Database Write Bug:
+  - Corrected `registerPeerHandshake` to store the peer's actual predictability table (`data.predictability`) under their `Node` DB record instead of our own table.
+- Added Unit Test:
+  - Wrote a Vitest case in `routing.test.ts` to assert that messages are only routed when the peer has higher predictability.
+  - Verified: All 54 unit tests pass, tsc build compiles cleanly.

@@ -93,23 +93,35 @@ export class RoutingEngine {
     this.lastAged = nowMs;
   }
 
-  getOutgoingForPeer(peerSeen: Set<string>): ExchangeAction[] {
+  getOutgoingForPeer(
+    peerSeen: Set<string>,
+    peerId?: string,
+    peerPredictability: Record<string, number> = {}
+  ): ExchangeAction[] {
     const actions: ExchangeAction[] = [];
 
     const scored: { action: ExchangeAction; priority: number }[] = [];
 
     for (const [, msg] of this.outbox) {
       if (peerSeen.has(msg.id)) continue;
-      const p = this.predictability.get(msg.recipientId) ?? 0;
-      scored.push({
-        action: {
-          messageId: msg.id,
-          payload: msg.payload,
-          recipientId: msg.recipientId,
-          hopCount: msg.hopCount,
-        },
-        priority: p,
-      });
+
+      const isRecipient = peerId ? msg.recipientId === peerId : false;
+      const pUs = this.predictability.get(msg.recipientId) ?? 0;
+      const pPeer = peerPredictability[msg.recipientId] ?? 0;
+
+      // PRoPHET heuristic: Only forward if the peer is the recipient, or has higher predictability.
+      // If peerId is not specified, default to epidemic flooding.
+      if (!peerId || isRecipient || pPeer > pUs) {
+        scored.push({
+          action: {
+            messageId: msg.id,
+            payload: msg.payload,
+            recipientId: msg.recipientId,
+            hopCount: msg.hopCount,
+          },
+          priority: isRecipient ? 999 : (peerId ? pPeer : pUs),
+        });
+      }
     }
 
     scored.sort((a, b) => b.priority - a.priority);

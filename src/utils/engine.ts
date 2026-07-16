@@ -213,7 +213,7 @@ export class AetherEngine {
 
   async registerPeerHandshake(
     scannedText: string
-  ): Promise<{ nodeId: string; seenMessageIds: string[] }> {
+  ): Promise<{ nodeId: string; seenMessageIds: string[]; predictability?: Record<string, number> }> {
     const data = JSON.parse(scannedText);
     if (!data.nodeId || !data.publicKey || !data.seenMessageIds) {
       throw new Error('Invalid handshake QR payload');
@@ -230,14 +230,17 @@ export class AetherEngine {
       id: data.nodeId,
       publicKey: data.publicKey,
       trustStatus: 'trusted',
-      deliveryPredictability: this.routing.getAllPredictability(),
+      deliveryPredictability: data.predictability ?? {},
       lastSeen: Date.now(),
     });
 
+    this.peerListeners.forEach((l) => l(data.nodeId));
     this.notifyState();
+
     return {
       nodeId: data.nodeId,
       seenMessageIds: data.seenMessageIds,
+      predictability: data.predictability,
     };
   }
 
@@ -288,9 +291,13 @@ export class AetherEngine {
     this.notifyState();
   }
 
-  generateOutgoingPayload(peerSeenIds: string[]): Uint8Array {
+  generateOutgoingPayload(
+    peerSeenIds: string[],
+    peerId?: string,
+    peerPredictability: Record<string, number> = {}
+  ): Uint8Array {
     const peerSeen = new Set(peerSeenIds);
-    const actions = this.routing.getOutgoingForPeer(peerSeen);
+    const actions = this.routing.getOutgoingForPeer(peerSeen, peerId, peerPredictability);
 
     const payloadText = JSON.stringify(actions);
     return new TextEncoder().encode(payloadText);
