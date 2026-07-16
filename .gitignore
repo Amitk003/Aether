@@ -15,3 +15,6 @@ First Contact Hackathon Idea Research.md
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Project session memory (not part of the codebase)
+project_memory
