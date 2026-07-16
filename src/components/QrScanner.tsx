@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { getEngine } from '../hooks/useAether';
 
 interface Props {
   active: boolean;
@@ -26,11 +27,13 @@ function QrScanner({ active, onScan, onError }: Props) {
       .then((stream) => {
         stream.getTracks().forEach((t) => t.stop());
         setPermission('granted');
+        getEngine().setCameraPermission(true);
         startScanner();
       })
       .catch(() => {
         setPermission('denied');
         setStatus('no permission');
+        getEngine().setCameraPermission(false);
         onError?.('Camera permission denied');
       });
 
