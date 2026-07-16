@@ -258,3 +258,13 @@ Actions taken:
 - Updated `QrScanner.tsx` to notify `AetherEngine` of camera permission updates dynamically.
 - Updated `Inbox.tsx` to decode plaintext payloads.
 - Verified tsc build and all 45 unit tests pass cleanly.
+
+### Code review fixes - Part 11
+
+Issues found and fixed during code review:
+
+1. Handshake Deadlock Risk: The `FindPeer` component contained an `outPayload.length === 0` check intended to prevent sending blank carousels. However, because `JSON.stringify([])` evaluates to `"[]"` (2 bytes), the check was dead code. More importantly, if it had been fixed to `outPayload.length <= 2`, it would have caused a sync deadlock because the other device's scanner would wait indefinitely without receiving the concluding packet. Fixed by removing the dead check and documenting the constraint.
+
+Actions taken:
+- Removed the dead `outPayload.length === 0` check in `FindPeer.tsx` and added a comment warning future developers about the handshake deadlock constraint.
+- Verified tsc build and all 45 unit tests pass cleanly.

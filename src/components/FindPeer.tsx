@@ -96,18 +96,15 @@ function FindPeer() {
         // Generate outgoing encrypted payloads for them
         const outPayload = engine.generateOutgoingPayload(peerHandshake.seenMessageIds);
         
-        // Check if we have anything to send
-        if (outPayload.length === 0) {
-          setOutgoingChunkInfo('No pending messages to send');
-        } else {
-          // Wire up transmitter and start sending carousel
-          engine.optical.setOnFrame((qrData, chunk) => {
-            setOutgoingQrData(qrData);
-            setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
-          });
-          
-          engine.optical.startSending(outPayload);
-        }
+        // Always wire up the transmitter and start sending the carousel, even if the payload is empty ("[]").
+        // This is required because the peer's camera receiver expects to receive at least one packet
+        // to trigger its complete callback and conclude the sync session. Skipping this would deadlock the peer.
+        engine.optical.setOnFrame((qrData, chunk) => {
+          setOutgoingQrData(qrData);
+          setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
+        });
+        
+        engine.optical.startSending(outPayload);
       } catch (err: any) {
         console.error('Handshake scan error:', err);
       }
