@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Inbox from './components/Inbox';
 import Outbox from './components/Outbox';
 import FindPeer from './components/FindPeer';
 import Diagnostics from './components/Diagnostics';
+import { getEngine, useAether } from './hooks/useAether';
 
 type Tab = 'inbox' | 'outbox' | 'find' | 'diagnostics';
 
@@ -15,6 +16,13 @@ const tabs: { key: Tab; label: string }[] = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('find');
+  const { state } = useAether();
+
+  useEffect(() => {
+    const engine = getEngine();
+    engine.initialize();
+    return () => { engine.destroy(); };
+  }, []);
 
   const renderTab = () => {
     switch (activeTab) {
@@ -34,6 +42,9 @@ function App() {
       <header style={styles.header}>
         <h1 style={styles.title}>Aether</h1>
         <p style={styles.subtitle}>Offline messaging using sound and light</p>
+        {state.phase !== 'idle' && (
+          <span style={styles.badge}>{state.phase}</span>
+        )}
       </header>
 
       <nav style={styles.nav}>
@@ -68,6 +79,10 @@ const styles: Record<string, React.CSSProperties> = {
   header: {
     padding: '16px 20px 8px',
     borderBottom: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap',
   },
   title: {
     fontSize: '1.5rem',
@@ -77,7 +92,16 @@ const styles: Record<string, React.CSSProperties> = {
   subtitle: {
     fontSize: '0.8rem',
     color: 'var(--text-secondary)',
-    margin: '4px 0 0',
+    margin: 0,
+    flex: 1,
+  },
+  badge: {
+    fontSize: '0.7rem',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    backgroundColor: 'var(--accent-dim)',
+    color: 'var(--accent)',
+    textTransform: 'uppercase',
   },
   nav: {
     display: 'flex',
