@@ -59,3 +59,21 @@ Actions taken:
 ## Next: storage branch
 
 Will create IndexedDB schemas with Dexie for nodes, messages, and handshakes stores.
+
+### Code review fixes - Part 2
+
+Issues found and fixed during code review:
+
+1. Missing PWA Manifest Icons: The PWA configuration was missing `icons` definitions in the manifest, which prevents mobile browsers from prompting to install the app or displaying a custom logo on home screens.
+2. Missing jpg in workbox globPatterns: The PWA did not cache JPG files, meaning the newly added PWA icons would not be available offline.
+
+Actions taken:
+- Generated a futuristic neon app icon (`aether_logo.jpg`) using AI image generation.
+- Copied it to `/public` in two standard PWA sizes: `pwa-192x192.jpg` and `pwa-512x512.jpg`.
+- Added the `icons` array mapping these assets in `vite.config.ts`.
+- Included `jpg` in `globPatterns` in `vite.config.ts`.
+- Verified build and caching behavior.
+
+## Next: storage branch
+
+Will create IndexedDB schemas with Dexie for nodes, messages, and handshakes stores.
