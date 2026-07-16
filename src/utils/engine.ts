@@ -62,7 +62,7 @@ export class AetherEngine {
   }
 
   async initialize(nodeId?: string): Promise<void> {
-    this.nodeId = nodeId ?? `node-${Date.now().toString(36)}`;
+    this.nodeId = nodeId ?? 'node-' + Date.now().toString(36);
     this.keyPair = await generateKeyPair();
 
     this.acoustic.setNodeId(this.nodeId);
@@ -107,13 +107,13 @@ export class AetherEngine {
   }
 
   async sendMessage(peerId: string, text: string): Promise<string> {
-    const msgId = `msg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    const msgId = 'msg-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
     const payload = new TextEncoder().encode(text);
 
     const plaintext = payload.buffer;
 
     const peerNode = await this.db.getNode(peerId);
-    if (!peerNode) throw new Error(`Unknown peer: ${peerId}`);
+    if (!peerNode) throw new Error('Unknown peer: ' + peerId);
 
     const peerKey = await importPublicKey(peerNode.publicKey);
     const sharedSecret = await deriveSharedSecret(this.keyPair!.privateKey, peerKey);
@@ -170,7 +170,7 @@ export class AetherEngine {
 
       const text = new TextDecoder().decode(decrypted);
 
-      const msgId = `msg-${Date.now().toString(36)}`;
+      const msgId = 'msg-' + Date.now().toString(36);
 
       await this.db.saveMessage({
         id: msgId,

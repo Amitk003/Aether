@@ -87,5 +87,3 @@ export class AetherDB extends Dexie {
     return handshakes.sort((a, b) => b.timestamp - a.timestamp);
   }
 }
-
-export const db = new AetherDB();
