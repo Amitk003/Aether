@@ -366,3 +366,7 @@ Actions taken:
   - Corrected `QrDisplay.tsx` styling where foreground `dark` was set to light grey (`#e0e0e0`) and background `light` was set to dark black (`#0a0a0a`), producing inverted QR codes.
   - Restored standard high-contrast black-on-white (`dark: '#000000'`, `light: '#ffffff'`) styling, allowing standard camera decoders to locate anchor squares and scan in less than a millisecond.
   - Verified: All 54 unit tests pass, tsc build compiles cleanly.
+- Fixed Typed Array Serialization Bug:
+  - Corrected `generateOutgoingPayload` in `src/utils/engine.ts` to convert binary `ArrayBuffer` message payloads into serializable `number[]` arrays before stringifying.
+  - This prevents `JSON.stringify` from encoding binary payloads as empty objects `{}` during optical carousel transfer, resolving the message decryption failures on the receiving node.
+  - Verified: All 54 unit tests pass, tsc build compiles cleanly.

@@ -299,7 +299,15 @@ export class AetherEngine {
     const peerSeen = new Set(peerSeenIds);
     const actions = this.routing.getOutgoingForPeer(peerSeen, peerId, peerPredictability);
 
-    const payloadText = JSON.stringify(actions);
+    // Convert binary ArrayBuffer payloads to serializable number[] arrays
+    const serializableActions = actions.map((act) => ({
+      messageId: act.messageId,
+      recipientId: act.recipientId,
+      hopCount: act.hopCount,
+      payload: Array.from(new Uint8Array(act.payload)),
+    }));
+
+    const payloadText = JSON.stringify(serializableActions);
     return new TextEncoder().encode(payloadText);
   }
 
