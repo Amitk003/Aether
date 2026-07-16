@@ -39,7 +39,13 @@ export function encodeChunk(chunk: DataChunk): string {
   combined.set(header);
   combined.set(chunk.data, header.length);
 
-  return btoa(String.fromCharCode(...combined));
+  // Stack-safe conversion to prevent RangeError: Maximum call stack size exceeded on large chunks
+  let binary = '';
+  const len = combined.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(combined[i]);
+  }
+  return btoa(binary);
 }
 
 export function decodeChunk(encoded: string): DataChunk | null {

@@ -162,6 +162,18 @@ Actions taken:
 - Wrote 9 chunker tests: split, encode, decode, corrupt-checksum, reconstruct, out-of-order, empty, single-byte
 - All 24 tests pass, tsc and vite build pass
 
+### Code review fixes - Part 6
+
+Issues found and fixed during code review:
+
+1. Dynamic Import in 10fps Loop: `QrDisplay.tsx` dynamically imported `qrcode` inside the `useEffect` render hook which triggers every 100ms when `data` updates. This caused asynchronous Promise-evaluation overhead. Fixed by statically importing `qrcode` at the top of the file, making the canvas draw operations 100% synchronous and flicker-free.
+2. Chunker Stack Overflow Risk: `chunker.ts` converted byte buffers to strings using the spread operator (`...combined`), which can trigger stack overflows on large chunks. Refactored `encodeChunk` to build the binary string using a standard, stack-safe loop.
+
+Actions taken:
+- Updated `src/components/QrDisplay.tsx` to statically import `qrcode`.
+- Updated `encodeChunk` in `src/utils/chunker.ts`.
+- Verified all 24 unit tests and production builds pass.
+
 ## Next: crypto branch
 
 Will implement ECC key generation, ECDH key exchange, and AES-GCM encryption.

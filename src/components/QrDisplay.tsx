@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 
 interface Props {
   data: string;
@@ -13,25 +14,16 @@ function QrDisplay({ data, label, active = true }: Props) {
   useEffect(() => {
     if (!active || !canvasRef.current || !data) return;
 
-    let cancelled = false;
-
-    import('qrcode').then((QRCode) => {
-      if (cancelled) return;
-      QRCode.toCanvas(canvasRef.current, data, {
-        width: 280,
-        margin: 2,
-        color: {
-          dark: '#e0e0e0',
-          light: '#0a0a0a',
-        },
-      }, (err: Error | null | undefined) => {
-        if (err) setError(err.message);
-      });
-    }).catch(() => {
-      setError('Failed to load QR library');
+    QRCode.toCanvas(canvasRef.current, data, {
+      width: 280,
+      margin: 2,
+      color: {
+        dark: '#e0e0e0',
+        light: '#0a0a0a',
+      },
+    }, (err: Error | null | undefined) => {
+      if (err) setError(err.message);
     });
-
-    return () => { cancelled = true; };
   }, [data, active]);
 
   if (!active || !data) {
