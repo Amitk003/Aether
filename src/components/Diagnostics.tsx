@@ -1,5 +1,4 @@
-import { useAether } from '../hooks/useAether';
-import { getEngine } from '../hooks/useAether';
+import { useAether, getEngine } from '../hooks/useAether';
 
 function Diagnostics() {
   const { state } = useAether();
