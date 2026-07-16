@@ -55,14 +55,16 @@ function FindPeer() {
     const handshake = await engine.getHandshakePayload();
     setOwnHandshakeData(handshake);
 
-    engine.optical.setOnChunk((received, total, progress) => {
-      setIncomingProgress('Scanning payload chunks: ' + received + '/' + total + ' (' + Math.round(progress * 100) + '%)');
-    });
+      engine.optical.setOnChunk((received, total, progress) => {
+        setIncomingProgress('Scanning payload chunks: ' + received + '/' + total + ' (' + Math.round(progress * 100) + '%)');
+        engine.trackChunkReceived();
+      });
 
     engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
       try {
         setIncomingProgress('Reconstructing and decrypting messages...');
         await engine.processIncomingPayload(peerId, payloadBytes);
+        engine.trackTransferComplete();
         alert('Sync completed successfully!');
       } catch (err: any) {
         alert('Sync processing failed: ' + err.message);
@@ -90,6 +92,7 @@ function FindPeer() {
         engine.optical.setOnFrame((qrData, chunk) => {
           setOutgoingQrData(qrData);
           setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
+          engine.trackChunkSent();
         });
 
         engine.optical.startSending(outPayload);

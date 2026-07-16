@@ -32,6 +32,9 @@ export class AetherEngine {
     totalMessagesSent: 0,
     totalMessagesReceived: 0,
     peersEncountered: 0,
+    chunksSent: 0,
+    chunksReceived: 0,
+    transfersCompleted: 0,
   };
 
   constructor() {
@@ -318,6 +321,22 @@ export class AetherEngine {
     return this.keyPair.publicKey as unknown as JsonWebKey;
   }
 
+  getSpectrumData(): Float32Array | null {
+    return this.acoustic.getFrequencyData();
+  }
+
+  trackChunkSent(): void {
+    this.stats.chunksSent++;
+  }
+
+  trackChunkReceived(): void {
+    this.stats.chunksReceived++;
+  }
+
+  trackTransferComplete(): void {
+    this.stats.transfersCompleted++;
+  }
+
   async getFingerprint(): Promise<string> {
     const pubJwk = await exportPublicKey(this.keyPair!.publicKey);
     return computeFingerprint(pubJwk);
@@ -372,6 +391,9 @@ export class AetherEngine {
       totalMessagesSent: this.stats.totalMessagesSent,
       totalMessagesReceived: this.stats.totalMessagesReceived,
       peersEncountered: this.stats.peersEncountered,
+      chunksSent: this.stats.chunksSent,
+      chunksReceived: this.stats.chunksReceived,
+      transfersCompleted: this.stats.transfersCompleted,
     };
   }
 }

@@ -19,4 +19,7 @@ export interface DiagnosticsData {
   totalMessagesSent: number;
   totalMessagesReceived: number;
   peersEncountered: number;
+  chunksSent: number;
+  chunksReceived: number;
+  transfersCompleted: number;
 }

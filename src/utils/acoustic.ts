@@ -18,6 +18,10 @@ export class AcousticService {
     return this.state;
   }
 
+  getFrequencyData(): Float32Array | null {
+    return this.rx.getFrequencyData();
+  }
+
   setNodeId(id: string): void {
     this.nodeId = id;
   }
