@@ -150,6 +150,45 @@ Actions taken:
 ## optical-basics branch
 
 - Implemented chunk carousel QR transfer for optical data link
+- Created src/utils/chunker.ts: split/reconstruct payloads with XOR checksum
+- Created src/types/optical.ts: DataChunk, TransferSession, OpticalConfig
+- Created src/utils/optical-tx.ts: OpticalTransmitter with frame interval
+- Created src/utils/optical-rx.ts: OpticalReceiver with dedup and progress
+- Created src/utils/optical.ts: High-level service
+- Created src/components/QrDisplay.tsx: QR canvas renderer
+- Created src/components/QrScanner.tsx: Camera scanner
+- Added @types/qrcode, html5-qrcode type declarations
+- Wrote 9 chunker tests (all passing)
+
+## crypto branch
+
+- Implemented end-to-end encryption using Web Crypto API
+  - ECC key pair generation (ECDH P-256)
+  - JWK export/import for public and private keys
+  - ECDH shared secret derivation
+  - HKDF-SHA256 key derivation for AES-256-GCM
+  - Authenticated encryption/decryption
+- Created src/types/crypto.ts: EncryptedMessage, KeyPair, IdentityKeys
+- Created src/utils/crypto.ts: generateKeyPair, exportPublicKey, importPublicKey, exportPrivateKey, importPrivateKey, deriveSharedSecret, encryptMessage, decryptMessage
+- Wrote 9 tests: key gen, export/import, matching shared secrets, round-trip, non-deterministic IV, wrong key rejection, tampered ciphertext rejection, large message (10KB), re-imported public key round-trip
+- All tests pass (including 6+9+9 from all modules running on main)
+- Verified tsc and vite build pass
+
+### Code review fixes - Part 7
+
+Issues found and fixed during code review:
+
+1. Blocked Private Key Export: The private key was generated and imported with `extractable` set to `false`. While secure against script exfiltration, it completely blocked the `exportPrivateKey` function from functioning, throwing `DOMException` on call. This made account backups/recovery impossible. Fixed by enabling `extractable: true` on private key creation and imports.
+2. Redundant Wrapper: Removed the local `getSubtle()` helper wrapper and directly accessed the globally available `crypto.subtle` API.
+
+Actions taken:
+- Updated `src/utils/crypto.ts` to make private keys extractable and call `crypto.subtle` directly.
+- Added a new unit test `exports and imports a private key as JWK successfully` in `src/utils/crypto.test.ts` to verify private key export/import works perfectly.
+- Verified all 25 unit tests and production builds pass.
+
+## Next: routing branch
+
+Will implement epidemic flooding with a seen-message blacklist.
 - Created src/utils/chunker.ts: split/reconstruct payloads with XOR checksum verification
 - Created src/types/optical.ts: DataChunk, TransferSession, OpticalConfig types
 - Created src/utils/optical-tx.ts: OpticalTransmitter with configurable frame interval
