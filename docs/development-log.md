@@ -41,6 +41,21 @@ Actions taken:
 - Removed .wasm from workbox glob patterns
 - All builds still pass
 
+### Code review fixes
+
+Issues found and fixed during code review:
+
+1. Missing svg in workbox globPatterns: Added 'svg' to the list. Without this, all SVG icons would break when running offline because the Service Worker would not cache them.
+
+2. allowImportingTsExtensions in tsconfig.json: Removed this option. Importing with full .tsx extensions is bad practice and causes issues with other tools. All imports should use extensionless paths (e.g., import App from './App').
+
+Actions taken:
+- Added 'svg' to workbox globPatterns in vite.config.ts
+- Removed allowImportingTsExtensions from tsconfig.json
+- Verified no imports in the codebase use extensions (they don't)
+- tsc and vite build both pass
+- PWA precache count went from 5 to 6 entries (SVG now included)
+
 ## Next: storage branch
 
 Will create IndexedDB schemas with Dexie for nodes, messages, and handshakes stores.

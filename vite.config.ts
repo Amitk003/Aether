@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,png,ico,svg}'],
       },
       manifest: {
         name: 'Aether',
