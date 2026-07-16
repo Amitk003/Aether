@@ -107,6 +107,18 @@ Actions taken:
 - Added custom scrollbar styles
 - Verified tsc and vite build pass
 
+### Code review fixes - Part 4
+
+Issues found and fixed during code review:
+
+1. DRY Styling Duplication: The duplicate inline `styles` declarations in `Inbox.tsx`, `Outbox.tsx`, `FindPeer.tsx`, and `Diagnostics.tsx` were copy-pasted and violated DRY principles.
+2. Inline CSS Bloat: Replaced bloated, duplicated inline React style declarations with reusable CSS utility classes in `index.css`.
+
+Actions taken:
+- Added `.card`, `.card-empty`, `.flex-row-between`, `.list-stack`, `.pulse-dot`, `.section-card`, and `.section-row` classes to `src/index.css`.
+- Refactored `Inbox.tsx`, `Outbox.tsx`, `FindPeer.tsx`, and `Diagnostics.tsx` to use `className` selectors instead of large local JS style objects, shrinking their file sizes by ~40%.
+- Verified all builds and tests pass.
+
 ## Next: acoustic-basics branch
 
 Will implement pure-JS 2-tone FSK for device discovery and handshake.

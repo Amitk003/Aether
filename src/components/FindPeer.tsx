@@ -5,8 +5,8 @@ function FindPeer() {
         Find Peer
       </h2>
 
-      <div style={styles.statusCard}>
-        <div style={styles.statusDot} />
+      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+        <div className="pulse-dot" />
         <div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
             Listening for nearby devices
@@ -17,7 +17,7 @@ function FindPeer() {
         </div>
       </div>
 
-      <div style={styles.helpCard}>
+      <div className="card">
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           How to connect
         </p>
@@ -31,32 +31,5 @@ function FindPeer() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  statusCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    padding: '16px',
-    backgroundColor: 'var(--bg-secondary)',
-    borderRadius: '8px',
-    border: '1px solid var(--border)',
-    marginBottom: '12px',
-  },
-  statusDot: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    backgroundColor: 'var(--accent)',
-    opacity: 0.5,
-    animation: 'pulse 2s infinite',
-  },
-  helpCard: {
-    padding: '16px',
-    backgroundColor: 'var(--bg-secondary)',
-    borderRadius: '8px',
-    border: '1px solid var(--border)',
-  },
-};
 
 export default FindPeer;

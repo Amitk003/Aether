@@ -8,17 +8,17 @@ function Outbox() {
       </h2>
 
       {messages.length === 0 ? (
-        <div style={styles.empty}>
+        <div className="card-empty">
           <p style={{ color: 'var(--text-secondary)' }}>No outgoing messages</p>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
             Messages you send will be queued here
           </p>
         </div>
       ) : (
-        <div style={styles.list}>
+        <div className="list-stack">
           {messages.map((msg) => (
-            <div key={msg.id} style={styles.message}>
-              <div style={styles.messageHeader}>
+            <div key={msg.id} className="card">
+              <div className="flex-row-between">
                 <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>To: {msg.to}</span>
                 <span style={{
                   fontSize: '0.75rem',
@@ -43,31 +43,5 @@ function Outbox() {
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  empty: {
-    textAlign: 'center',
-    padding: '40px 20px',
-    backgroundColor: 'var(--bg-secondary)',
-    borderRadius: '8px',
-    border: '1px solid var(--border)',
-  },
-  list: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  message: {
-    padding: '12px',
-    backgroundColor: 'var(--bg-secondary)',
-    borderRadius: '8px',
-    border: '1px solid var(--border)',
-  },
-  messageHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-};
 
 export default Outbox;
