@@ -147,6 +147,21 @@ Actions taken:
 - Verified tsc and vite build pass
 - Note: wirehair-wasm is NOT included (Windows postinstall uses rm -rf). Using pure-JS LT code fallback if needed.
 
-## Next: optical-basics branch
+## optical-basics branch
 
-Will implement chunk-carousel QR transfer for message payloads.
+- Implemented chunk carousel QR transfer for optical data link
+- Created src/utils/chunker.ts: split/reconstruct payloads with XOR checksum verification
+- Created src/types/optical.ts: DataChunk, TransferSession, OpticalConfig types
+- Created src/utils/optical-tx.ts: OpticalTransmitter with configurable frame interval
+- Created src/utils/optical-rx.ts: OpticalReceiver with dedup cache and progress tracking
+- Created src/utils/optical.ts: High-level service combining tx/rx
+- Created src/components/QrDisplay.tsx: Renders QR code to dark canvas via qrcode package
+- Created src/components/QrScanner.tsx: Camera scanner using html5-qrcode with permission handling
+- Added @types/qrcode for type definitions
+- Created src/types/html5-qrcode.d.ts (no @types package available)
+- Wrote 9 chunker tests: split, encode, decode, corrupt-checksum, reconstruct, out-of-order, empty, single-byte
+- All 24 tests pass, tsc and vite build pass
+
+## Next: crypto branch
+
+Will implement ECC key generation, ECDH key exchange, and AES-GCM encryption.
