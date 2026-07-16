@@ -241,6 +241,7 @@ export class AetherEngine {
     } catch (err: any) {
       throw new Error('Failed to parse incoming payload: ' + err.message);
     }
+    const rawActions: any[] = JSON.parse(payloadText);
 
     // Convert deserialized number[] payloads back to Uint8Array
     const actions: ExchangeAction[] = rawActions.map((a) => ({
@@ -280,6 +281,12 @@ export class AetherEngine {
   generateOutgoingPayload(peerSeenIds: string[]): Uint8Array {
     const peerSeen = new Set(peerSeenIds);
     const actions = this.routing.getOutgoingForPeer(peerSeen);
+    
+    // Mark these as delivered in our local outbox so we don't try to send them again
+    for (const action of actions) {
+      this.routing.confirmDelivered(action.messageId);
+      this.db.markDelivered(action.messageId).catch(() => {});
+    }
 
     const payloadText = JSON.stringify(actions);
     return new TextEncoder().encode(payloadText);
@@ -296,6 +303,7 @@ export class AetherEngine {
       acousticState: this.acoustic.getState(),
       pendingMessages: this.routing.pendingCount,
       knownPeers: Array.from(this.knownPeers),
+      knownPeers: [],
       lastSync: null,
       diagnostics: this.getDiagnostics(),
     };

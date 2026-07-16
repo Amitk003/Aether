@@ -14,6 +14,7 @@ function FindPeer() {
   const [ownHandshakeData, setOwnHandshakeData] = useState('');
   
   const [outgoingQrData, setOutgoingQrData] = useState<string | null>(null);
+  const [outgoingQrData, setOutgoingQrData] = useState('');
   const [outgoingChunkInfo, setOutgoingChunkInfo] = useState('');
   const [incomingProgress, setIncomingProgress] = useState('Waiting to scan...');
 
@@ -78,6 +79,10 @@ function FindPeer() {
     engine.setPhase('transferring');
     
     // 4. Start optical receiver
+    // 2. Transition phase
+    engine.setPhase('transferring');
+    
+    // 3. Start optical receiver
     engine.optical.startReceiving();
   };
 
@@ -92,6 +97,7 @@ function FindPeer() {
         // Transition to payload transfer step
         setSyncStep('payload');
         setIncomingProgress('Handshake OK. Align screens for payload transfer...');
+        setIncomingProgress('Handshake OK. Scanning message chunks...');
         
         // Generate outgoing encrypted payloads for them
         const outPayload = engine.generateOutgoingPayload(peerHandshake.seenMessageIds);
@@ -102,6 +108,10 @@ function FindPeer() {
         engine.optical.setOnFrame((qrData, chunk) => {
           setOutgoingQrData(qrData);
           setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
+        // Wire up transmitter and start sending carousel
+        engine.optical.setOnFrame((qrData, chunk) => {
+          setOutgoingQrData(qrData);
+          setOutgoingChunkInfo(`Sending chunk ${chunk.index + 1}/${chunk.total}`);
         });
         
         engine.optical.startSending(outPayload);
@@ -110,6 +120,22 @@ function FindPeer() {
       }
     } else {
       // Step 2: Feed scanned chunk to optical receiver
+      engine.optical.setOnChunk((received, total, progress) => {
+        setIncomingProgress(`Scanning payload chunks: ${received}/${total} (${Math.round(progress * 100)}%)`);
+      });
+
+      engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
+        try {
+          setIncomingProgress('Reconstructing & decrypting messages...');
+          await engine.processIncomingPayload(syncPeerId!, payloadBytes);
+          alert('Sync completed successfully!');
+        } catch (err: any) {
+          alert(`Sync processing failed: ${err.message}`);
+        } finally {
+          handleCancelSync();
+        }
+      });
+
       engine.optical.submitFrame(scannedText);
     }
   };
@@ -120,6 +146,7 @@ function FindPeer() {
     engine.setPhase('idle');
     setSyncPeerId(null);
     setOutgoingQrData(null);
+    setOutgoingQrData('');
     setOutgoingChunkInfo('');
     setIncomingProgress('Waiting to scan...');
   };
@@ -159,6 +186,8 @@ function FindPeer() {
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 {outgoingChunkInfo || 'Preparing payload...'}
               </p>
+            ) : (
+              <QrDisplay data={outgoingQrData} label={outgoingChunkInfo || "Your Outgoing Payload"} />
             )}
           </div>
 
