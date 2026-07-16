@@ -18,11 +18,14 @@ const tabs: { key: Tab; label: string }[] = [
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('find');
+  const [ownNodeId, setOwnNodeId] = useState('');
   const { state } = useAether();
 
   useEffect(() => {
     const engine = getEngine();
-    engine.initialize();
+    engine.initialize().then(() => {
+      setOwnNodeId(engine.getNodeId());
+    });
     return () => { engine.destroy(); };
   }, []);
 
@@ -44,8 +47,15 @@ function App() {
   return (
     <div style={styles.container}>
       <header style={styles.header}>
-        <h1 style={styles.title}>Aether</h1>
-        <p style={styles.subtitle}>Offline messaging using sound and light</p>
+        <div style={{ flex: 1 }}>
+          <h1 style={styles.title}>Aether</h1>
+          <p style={styles.subtitle}>Offline messaging using sound and light</p>
+          {ownNodeId && (
+            <p style={{ fontSize: '0.75rem', color: 'var(--accent)', margin: '4px 0 0', fontFamily: 'monospace' }}>
+              Your ID: {ownNodeId}
+            </p>
+          )}
+        </div>
         {state.phase !== 'idle' && (
           <span style={styles.badge}>{state.phase}</span>
         )}
