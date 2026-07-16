@@ -3,14 +3,16 @@ import Inbox from './components/Inbox';
 import Outbox from './components/Outbox';
 import FindPeer from './components/FindPeer';
 import Diagnostics from './components/Diagnostics';
+import Trust from './components/Trust';
 import { getEngine, useAether } from './hooks/useAether';
 
-type Tab = 'inbox' | 'outbox' | 'find' | 'diagnostics';
+type Tab = 'inbox' | 'outbox' | 'find' | 'trust' | 'diagnostics';
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'inbox', label: 'Inbox' },
   { key: 'outbox', label: 'Outbox' },
   { key: 'find', label: 'Find Peer' },
+  { key: 'trust', label: 'Trust' },
   { key: 'diagnostics', label: 'Diagnostics' },
 ];
 
@@ -32,6 +34,8 @@ function App() {
         return <Outbox />;
       case 'find':
         return <FindPeer />;
+      case 'trust':
+        return <Trust />;
       case 'diagnostics':
         return <Diagnostics />;
     }

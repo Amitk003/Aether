@@ -2,9 +2,10 @@ import { AetherDB } from './db';
 import { AcousticService } from './acoustic';
 import { OpticalService } from './optical';
 import { RoutingEngine } from './routing';
-import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret, encryptMessage, decryptMessage } from './crypto';
+import { generateKeyPair, exportPublicKey, importPublicKey, deriveSharedSecret, encryptMessage, decryptMessage, computeFingerprint } from './crypto';
 import type { AppState, AppPhase, DiagnosticsData } from '../types/engine';
 import type { ExchangeAction } from '../types/routing';
+import type { Node } from '../types/db';
 
 export type StateListener = (state: AppState) => void;
 export type PeerListener = (peerId: string) => void;
@@ -315,6 +316,23 @@ export class AetherEngine {
   getPublicKey(): JsonWebKey | null {
     if (!this.keyPair) return null;
     return this.keyPair.publicKey as unknown as JsonWebKey;
+  }
+
+  async getFingerprint(): Promise<string> {
+    const pubJwk = await exportPublicKey(this.keyPair!.publicKey);
+    return computeFingerprint(pubJwk);
+  }
+
+  async getAllPeers(): Promise<Node[]> {
+    return this.db.getAllNodes();
+  }
+
+  async setTrustStatus(peerId: string, status: 'trusted' | 'untrusted' | 'blocked'): Promise<void> {
+    const node = await this.db.getNode(peerId);
+    if (!node) throw new Error('Unknown peer: ' + peerId);
+    node.trustStatus = status;
+    await this.db.upsertNode(node);
+    this.notifyState();
   }
 
   destroy(): void {

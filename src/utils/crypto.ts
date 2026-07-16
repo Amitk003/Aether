@@ -127,6 +127,17 @@ export async function encryptMessage(
   return { iv, ciphertext };
 }
 
+export async function computeFingerprint(jwk: JsonWebKey): Promise<string> {
+  const data = new TextEncoder().encode(JSON.stringify({ x: jwk.x, y: jwk.y, crv: jwk.crv }));
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(hash);
+  let hex = '';
+  for (const b of bytes) {
+    hex += b.toString(16).padStart(2, '0');
+  }
+  return hex.slice(0, 16);
+}
+
 export async function decryptMessage(
   sharedSecret: ArrayBuffer,
   encrypted: EncryptedMessage
