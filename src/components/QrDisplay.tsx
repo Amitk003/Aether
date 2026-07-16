@@ -18,8 +18,8 @@ function QrDisplay({ data, label, active = true }: Props) {
       width: 280,
       margin: 2,
       color: {
-        dark: '#e0e0e0',
-        light: '#0a0a0a',
+      dark: '#000000',
+      light: '#ffffff',
       },
     }, (err: Error | null | undefined) => {
       if (err) setError(err.message);

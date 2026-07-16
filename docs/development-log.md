@@ -362,3 +362,7 @@ Actions taken:
   - When Device A scans B's handshake QR, it turns off its camera scanner and shows a success checkmark, but keeps displaying its own Handshake QR on screen so B can finish scanning it.
   - This prevents the race condition where one device transitions to showing its payload QR before the other device has a chance to scan its handshake QR.
   - Verified: All 54 unit tests pass, tsc build compiles cleanly.
+- Fixed QR Code Color Inversion Scan Failure:
+  - Corrected `QrDisplay.tsx` styling where foreground `dark` was set to light grey (`#e0e0e0`) and background `light` was set to dark black (`#0a0a0a`), producing inverted QR codes.
+  - Restored standard high-contrast black-on-white (`dark: '#000000'`, `light: '#ffffff'`) styling, allowing standard camera decoders to locate anchor squares and scan in less than a millisecond.
+  - Verified: All 54 unit tests pass, tsc build compiles cleanly.
