@@ -215,5 +215,29 @@ describe('routing', () => {
       expect(after).toBeLessThan(before);
       vi.useRealTimers();
     });
+
+    it('PRoPHET routing only forwards when peer has higher predictability', () => {
+      const r = new RoutingEngine();
+      r.enqueue(makeMsg({ id: 'msg-1', recipientId: 'NodeC' }));
+      r.enqueue(makeMsg({ id: 'msg-2', recipientId: 'NodeD' }));
+
+      // We have encounters with Node D (so we are a good carrier for D)
+      r.recordEncounter('NodeD');
+      r.recordEncounter('NodeD');
+
+      // Peer NodeB has high predictability for C (0.5), low for D (0.1)
+      const peerPredictability = {
+        NodeC: 0.5,
+        NodeD: 0.1,
+      };
+
+      const actions = r.getOutgoingForPeer(new Set(), 'NodeB', peerPredictability);
+      const messageIds = actions.map(a => a.messageId);
+
+      // We should forward NodeC's message to NodeB because NodeB (0.5) > us (0)
+      expect(messageIds).toContain('msg-1');
+      // We should NOT forward NodeD's message because NodeB (0.1) < us (0.625)
+      expect(messageIds).not.toContain('msg-2');
+    });
   });
 });
