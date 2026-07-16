@@ -96,6 +96,17 @@ Actions taken:
 - Updated handshake recency test in `src/utils/db.test.ts`.
 - Verified all unit tests and builds pass.
 
-## Next: ui-shell branch
+## ui-shell branch
 
-Will create the dark UI dashboard with Inbox, Outbox, and Find Peer panels.
+- Created App.tsx with 4-tab navigation layout (Inbox, Outbox, Find Peer, Diagnostics)
+- Created Inbox component with empty state placeholder
+- Created Outbox component with message status badges (pending/delivered)
+- Created Find Peer component with pulsing status indicator and help instructions
+- Created Diagnostics component showing audio, camera, and storage status
+- Added keyframe animation for pulse effect in index.css
+- Added custom scrollbar styles
+- Verified tsc and vite build pass
+
+## Next: acoustic-basics branch
+
+Will implement pure-JS 2-tone FSK for device discovery and handshake.
