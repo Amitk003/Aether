@@ -231,26 +231,33 @@ export class AetherEngine {
 
   async processIncomingPayload(peerId: string, payloadBytes: Uint8Array): Promise<void> {
     const payloadText = new TextDecoder().decode(payloadBytes);
-    const actions: ExchangeAction[] = JSON.parse(payloadText);
+    const rawActions: any[] = JSON.parse(payloadText);
 
-    // Process through the epidemic routing engine
+    // Convert deserialized number[] payloads back to Uint8Array
+    const actions: ExchangeAction[] = rawActions.map((a) => ({
+      messageId: a.messageId,
+      recipientId: a.recipientId,
+      hopCount: a.hopCount,
+      payload: new Uint8Array(a.payload),
+    }));
+
     const { received, forward } = this.routing.receiveFromPeer(actions, this.nodeId);
 
-    // 1. Process received messages addressed to us (Decrypt and write to Inbox store)
     for (const action of received) {
-      const iv = action.payload.subarray(0, 12);
-      const encryptedPayload = action.payload.subarray(12);
+      const rawPayload = new Uint8Array(action.payload);
+      const iv = rawPayload.subarray(0, 12);
+      const encryptedPayload = rawPayload.subarray(12);
       await this.receiveMessage(peerId, encryptedPayload, iv);
     }
 
-    // 2. Process forward messages addressed to others (Save to routing queue as pending)
     for (const action of forward) {
-      const iv = action.payload.subarray(0, 12);
+      const rawPayload = new Uint8Array(action.payload);
+      const iv = rawPayload.subarray(0, 12);
       await this.db.saveMessage({
         id: action.messageId,
         senderId: peerId,
         recipientId: action.recipientId,
-        payload: action.payload.buffer as ArrayBuffer,
+        payload: rawPayload.buffer,
         ttl: Date.now() + 86400000,
         status: 'pending',
         createdAt: Date.now(),
