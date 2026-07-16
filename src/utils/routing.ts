@@ -51,7 +51,8 @@ export class RoutingEngine {
   receiveFromPeer(
     actions: ExchangeAction[],
     ownNodeId: string
-  ): ExchangeAction[] {
+  ): { received: ExchangeAction[]; forward: ExchangeAction[] } {
+    const received: ExchangeAction[] = [];
     const forward: ExchangeAction[] = [];
 
     for (const action of actions) {
@@ -59,6 +60,7 @@ export class RoutingEngine {
       this.seen.add(action.messageId);
 
       if (action.recipientId === ownNodeId) {
+        received.push(action);
         continue;
       }
 
@@ -78,7 +80,7 @@ export class RoutingEngine {
       });
     }
 
-    return forward;
+    return { received, forward };
   }
 
   confirmDelivered(messageId: string): void {
@@ -90,12 +92,6 @@ export class RoutingEngine {
       nodeId,
       seenMessageIds: Array.from(this.seen),
     };
-  }
-
-  applySummary(summary: ExchangeSummary): void {
-    for (const id of summary.seenMessageIds) {
-      this.seen.add(id);
-    }
   }
 
   clear(): void {
