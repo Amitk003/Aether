@@ -12,7 +12,8 @@ export class AudioReceiver {
   private animFrameId: number | null = null;
   private onBeacon: BeaconCallback | null = null;
 
-  private buffer: Float32Array[] = [];
+  // Zero-allocation buffer pooling
+  private staticBuffer: Float32Array | null = null;
   private bufferSize = 0;
   private readonly BUFFER_TARGET = 4;
 
@@ -23,6 +24,7 @@ export class AudioReceiver {
   private receivedTones: number[] = [];
   private readingData = false;
   private consecutiveSilence = 0;
+  private lastRegisteredSymbol: number | null = null;
 
   setOnBeacon(callback: BeaconCallback): void {
     this.onBeacon = callback;
@@ -46,6 +48,9 @@ export class AudioReceiver {
     this.analyser.fftSize = config.fftSize;
     this.source.connect(this.analyser);
 
+    // Pre-allocate buffer once to ensure zero heap allocations inside the 60fps render loop
+    this.staticBuffer = new Float32Array(this.analyser.frequencyBinCount * this.BUFFER_TARGET);
+
     this.isActive = true;
     this.resetState();
     this.poll(config);
@@ -64,58 +69,47 @@ export class AudioReceiver {
     this.stream = null;
     this.ctx?.close();
     this.ctx = null;
+    this.staticBuffer = null;
   }
 
   private resetState(): void {
-    this.buffer = [];
     this.bufferSize = 0;
     this.preamblePower = 0;
     this.receivedTones = [];
     this.readingData = false;
     this.consecutiveSilence = 0;
+    this.lastRegisteredSymbol = null;
   }
 
   private poll(config: AcousticConfig): void {
-    if (!this.isActive || !this.analyser) return;
+    if (!this.isActive || !this.analyser || !this.staticBuffer) return;
 
     const bufferLength = this.analyser.frequencyBinCount;
-    const timeData = new Float32Array(bufferLength);
-    this.analyser.getFloatTimeDomainData(timeData);
-
-    this.buffer.push(timeData);
+    const offset = this.bufferSize * bufferLength;
+    
+    // Write directly into the pre-allocated slice of our static buffer
+    this.analyser.getFloatTimeDomainData(this.staticBuffer.subarray(offset, offset + bufferLength) as any);
     this.bufferSize++;
 
     if (this.bufferSize >= this.BUFFER_TARGET) {
-      const combined = this.combineBuffers();
-      this.processFrame(combined, config);
-      this.buffer = [];
+      this.processFrame(this.staticBuffer as any, config);
       this.bufferSize = 0;
     }
 
     this.animFrameId = requestAnimationFrame(() => this.poll(config));
   }
 
-  private combineBuffers(): Float32Array {
-    const chunkSize = this.buffer[0].length;
-    const combined = new Float32Array(chunkSize * this.buffer.length);
-    let offset = 0;
-    for (const chunk of this.buffer) {
-      combined.set(chunk, offset);
-      offset += chunkSize;
-    }
-    return combined;
-  }
-
   private processFrame(samples: Float32Array, config: AcousticConfig): void {
     const preamblePower = detectFrequency(samples, config.preambleFreq, config.sampleRate);
-
     const threshold = 0.5;
 
+    // Detect Preamble (Discovery Start)
     if (!this.readingData && preamblePower > threshold) {
       this.preamblePower = preamblePower;
       this.readingData = true;
       this.receivedTones = [];
       this.consecutiveSilence = 0;
+      this.lastRegisteredSymbol = null;
       return;
     }
 
@@ -125,8 +119,17 @@ export class AudioReceiver {
         dataFrequencies.push(config.baseFreq + i * config.stepFreq);
       }
 
-      const powers = detectFrequencies(samples, dataFrequencies, config.sampleRate);
+      // Check spacer frequency (symbol transition index 16)
+      const spacerFreq = config.baseFreq + 16 * config.stepFreq;
+      const spacerPower = detectFrequency(samples, spacerFreq, config.sampleRate);
 
+      if (spacerPower > threshold) {
+        this.lastRegisteredSymbol = null; // Reset for next symbol
+        this.consecutiveSilence = 0;
+        return;
+      }
+
+      const powers = detectFrequencies(samples, dataFrequencies, config.sampleRate);
       let maxFreq: number | null = null;
       let maxPower = 0;
       for (const [freq, power] of powers) {
@@ -137,7 +140,6 @@ export class AudioReceiver {
       }
 
       const endPower = detectFrequency(samples, config.endFreq, config.sampleRate);
-
       if (endPower > threshold) {
         this.finalizeBeacon();
         return;
@@ -145,11 +147,14 @@ export class AudioReceiver {
 
       if (maxFreq !== null && maxPower > threshold) {
         const idx = Math.round((maxFreq - config.baseFreq) / config.stepFreq);
-        this.receivedTones.push(idx);
+        if (idx !== this.lastRegisteredSymbol) {
+          this.receivedTones.push(idx);
+          this.lastRegisteredSymbol = idx; // Lock current symbol
+        }
         this.consecutiveSilence = 0;
       } else {
         this.consecutiveSilence++;
-        if (this.consecutiveSilence > 3) {
+        if (this.consecutiveSilence > 5) {
           this.readingData = false;
         }
       }

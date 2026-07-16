@@ -30,15 +30,29 @@ export class AudioTransmitter {
         return;
       }
 
+      // Create a dedicated gain node for this tone to implement a smooth attack/decay envelope
+      const toneGain = this.ctx.createGain();
+      const now = this.ctx.currentTime;
+      const rampTime = 0.01; // 10ms envelope ramp to prevent audible clicking/popping noises
+
+      toneGain.gain.setValueAtTime(0, now);
+      toneGain.gain.linearRampToValueAtTime(1.0, now + rampTime);
+      toneGain.gain.setValueAtTime(1.0, now + (duration / 1000) - rampTime);
+      toneGain.gain.linearRampToValueAtTime(0, now + duration / 1000);
+
       this.oscillator = this.ctx.createOscillator();
       this.oscillator.type = 'sine';
       this.oscillator.frequency.value = freq;
-      this.oscillator.connect(this.gain);
-      this.oscillator.start();
-      this.oscillator.stop(this.ctx.currentTime + duration / 1000);
+      
+      this.oscillator.connect(toneGain);
+      toneGain.connect(this.gain);
+      
+      this.oscillator.start(now);
+      this.oscillator.stop(now + duration / 1000);
 
       this.oscillator.onended = () => {
         this.oscillator?.disconnect();
+        toneGain.disconnect();
         this.oscillator = null;
         resolve();
       };
@@ -61,17 +75,30 @@ export class AudioTransmitter {
 
     const tones: Array<{ freq: number; duration: number }> = [];
 
+    // Preamble tone for synchronization
     tones.push({ freq: config.preambleFreq, duration: config.preambleDuration });
+
+    const spacerFreq = config.baseFreq + 16 * config.stepFreq;
+    const spacerDuration = 60; // 60ms is sufficient for Goertzel detection
 
     for (const char of nodeId) {
       const hexVal = parseInt(char, 16);
       if (isNaN(hexVal)) continue;
+      
+      // Symbol tone
       tones.push({
         freq: config.baseFreq + hexVal * config.stepFreq,
         duration: config.toneDuration,
       });
+
+      // Self-clocking spacer tone to separate characters
+      tones.push({
+        freq: spacerFreq,
+        duration: spacerDuration,
+      });
     }
 
+    // End tone
     tones.push({ freq: config.endFreq, duration: config.endDuration });
 
     await this.playSequence(tones);

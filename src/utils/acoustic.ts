@@ -23,7 +23,12 @@ export class AcousticService {
   }
 
   setOnBeacon(callback: BeaconCallback): void {
-    this.rx.setOnBeacon(callback);
+    // Filter out our own nodeId to prevent a self-discovery feedback loop
+    this.rx.setOnBeacon((msg) => {
+      if (msg.nodeId !== this.nodeId) {
+        callback(msg);
+      }
+    });
   }
 
   async startListening(): Promise<void> {
