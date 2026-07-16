@@ -56,24 +56,6 @@ Actions taken:
 - tsc and vite build both pass
 - PWA precache count went from 5 to 6 entries (SVG now included)
 
-## Next: storage branch
-
-Will create IndexedDB schemas with Dexie for nodes, messages, and handshakes stores.
-
-### Code review fixes - Part 2
-
-Issues found and fixed during code review:
-
-1. Missing PWA Manifest Icons: The PWA configuration was missing `icons` definitions in the manifest, which prevents mobile browsers from prompting to install the app or displaying a custom logo on home screens.
-2. Missing jpg in workbox globPatterns: The PWA did not cache JPG files, meaning the newly added PWA icons would not be available offline.
-
-Actions taken:
-- Generated a futuristic neon app icon (`aether_logo.jpg`) using AI image generation.
-- Copied it to `/public` in two standard PWA sizes: `pwa-192x192.jpg` and `pwa-512x512.jpg`.
-- Added the `icons` array mapping these assets in `vite.config.ts`.
-- Included `jpg` in `globPatterns` in `vite.config.ts`.
-- Verified build and caching behavior.
-
 ### Review: JPG icons too large, wrong format
 
 Problems found:
@@ -88,6 +70,19 @@ Fixes:
 - Added apple-touch-icon link to index.html
 - Build passes, precache now 10 entries (161.83 KiB total)
 
-## Next: storage branch
+## storage branch
 
-Will create IndexedDB schemas with Dexie for nodes, messages, and handshakes stores.
+- Created src/types/db.ts with Node, Message, Handshake interfaces
+- Created src/utils/db.ts with AetherDB class (extends Dexie)
+  - nodes store: upsert, get, getAll
+  - messages store: save, get, getPending, getExpired, markDelivered, deleteExpired
+  - handshakes store: record, getRecent, getByNode
+- Added TTL-based message expiration
+- Installed fake-indexeddb for testing
+- Created src/test-setup.ts with fake-indexeddb auto import
+- Wrote 9 tests covering all store operations (all passing)
+- Verified tsc and vite build pass
+
+## Next: ui-shell branch
+
+Will create the dark UI dashboard with Inbox, Outbox, and Find Peer panels.
