@@ -186,9 +186,23 @@ Actions taken:
 - Added a new unit test `exports and imports a private key as JWK successfully` in `src/utils/crypto.test.ts` to verify private key export/import works perfectly.
 - Verified all 25 unit tests and production builds pass.
 
-## Next: routing branch
+## routing branch
 
-Will implement epidemic flooding with a seen-message blacklist.
+- Implemented epidemic flooding routing engine (RoutingEngine class)
+  - Seen set of message IDs to prevent re-delivery
+  - Pending outbox for undelivered messages
+  - getOutgoingForPeer(peerSeen) computes difference of seen sets
+  - receiveFromPeer handles inbound with multi-hop forwarding
+  - MAX_HOPS = 10 prevents infinite routing loops
+  - getSummary/applySummary for anti-entropy sync between peers
+- Created src/types/routing.ts: OutgoingMessage, ExchangeSummary, ExchangeAction
+- Created src/utils/routing.ts: RoutingEngine class
+- Wrote 11 tests: enqueue, dedup, peer transfer filter, self-delivery, forward, hop limit, duplicate rejection, delivery confirmation, summary sync, clear
+- All 45 tests pass, tsc and vite build pass
+
+## Next: integration branch
+
+Will wire up the state machine connecting all modules (acoustic + optical + crypto + routing + storage).
 - Created src/utils/chunker.ts: split/reconstruct payloads with XOR checksum verification
 - Created src/types/optical.ts: DataChunk, TransferSession, OpticalConfig types
 - Created src/utils/optical-tx.ts: OpticalTransmitter with configurable frame interval
