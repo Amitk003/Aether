@@ -28,10 +28,6 @@ export class RoutingEngine {
     this.seen.add(message.id);
   }
 
-  getOutgoing(): OutgoingMessage[] {
-    return Array.from(this.outbox.values());
-  }
-
   getOutgoingForPeer(peerSeen: Set<string>): ExchangeAction[] {
     const actions: ExchangeAction[] = [];
 
