@@ -96,6 +96,44 @@ Actions taken:
 - Updated handshake recency test in `src/utils/db.test.ts`.
 - Verified all unit tests and builds pass.
 
-## Next: ui-shell branch
+## ui-shell branch
 
-Will create the dark UI dashboard with Inbox, Outbox, and Find Peer panels.
+- Created App.tsx with 4-tab navigation layout (Inbox, Outbox, Find Peer, Diagnostics)
+- Created Inbox component with empty state placeholder
+- Created Outbox component with message status badges (pending/delivered)
+- Created Find Peer component with pulsing status indicator and help instructions
+- Created Diagnostics component showing audio, camera, and storage status
+- Added keyframe animation for pulse effect in index.css
+- Added custom scrollbar styles
+- Verified tsc and vite build pass
+
+### Code review fixes - Part 4
+
+Issues found and fixed during code review:
+
+1. DRY Styling Duplication: The duplicate inline `styles` declarations in `Inbox.tsx`, `Outbox.tsx`, `FindPeer.tsx`, and `Diagnostics.tsx` were copy-pasted and violated DRY principles.
+2. Inline CSS Bloat: Replaced bloated, duplicated inline React style declarations with reusable CSS utility classes in `index.css`.
+
+Actions taken:
+- Added `.card`, `.card-empty`, `.flex-row-between`, `.list-stack`, `.pulse-dot`, `.section-card`, and `.section-row` classes to `src/index.css`.
+- Refactored `Inbox.tsx`, `Outbox.tsx`, `FindPeer.tsx`, and `Diagnostics.tsx` to use `className` selectors instead of large local JS style objects, shrinking their file sizes by ~40%.
+- Verified all builds and tests pass.
+
+### Code review fixes - Part 5
+
+Issues found and fixed:
+
+1. FindPeer.tsx still had mixed inline style on the status card: `<div className="card" style={{ display: 'flex', ... }}>`. Moved to a dedicated `.status-card` CSS class.
+2. `.section-card` was a near-duplicate of `.card` (only difference was margin-bottom). Removed `.section-card`, replaced with `.card + .card` spacing rule.
+3. Diagnostics.tsx was using `.section-card`; switched to `.card`.
+
+Actions taken:
+- Added `.status-card` class to index.css
+- Added `.card + .card` margin rule (replaces explicit margin on each card)
+- Removed `.section-card` class
+- Updated FindPeer.tsx and Diagnostics.tsx
+- Build passes
+
+## Next: acoustic-basics branch
+
+Will implement pure-JS 2-tone FSK for device discovery and handshake.
