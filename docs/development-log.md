@@ -74,6 +74,20 @@ Actions taken:
 - Included `jpg` in `globPatterns` in `vite.config.ts`.
 - Verified build and caching behavior.
 
+### Review: JPG icons too large, wrong format
+
+Problems found:
+- Both JPG files were 672 KB each (bloated precache)
+- JPEG lacks transparency support, not standard for PWA icons
+- Missing apple-touch-icon link for iOS home screens
+
+Fixes:
+- Removed oversized JPGs (git rm)
+- Generated proper PNG icons using System.Drawing (192x192: 4.4 KB, 512x512: 16.5 KB)
+- Updated vite.config.ts: icons now reference PNG files, removed jpg from globPatterns
+- Added apple-touch-icon link to index.html
+- Build passes, precache now 10 entries (161.83 KiB total)
+
 ## Next: storage branch
 
 Will create IndexedDB schemas with Dexie for nodes, messages, and handshakes stores.
