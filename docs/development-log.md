@@ -292,3 +292,17 @@ Issues found and fixed during code review:
 Actions taken:
 - Removed duplicate filter definitions, action loops, and state properties.
 - Verified tsc build and all 45 unit tests pass cleanly.
+
+### Code review fixes - Part 14
+
+Issues found and fixed during code review:
+
+1. Unused Method in Routing: The `getOutgoing()` method in the `RoutingEngine` class was unused since we only query peer-filtered outbox items. Removed the method to keep the routing contract minimal.
+2. Concurrent Database Instance Risk: The file `src/utils/db.ts` exported an unused global `db` singleton. Because `AetherEngine` spawns its own `AetherDB` instance, having a second global instance active created concurrency and synchronization risks in Dexie. Removed the duplicate export.
+3. Code Cleanups: Combined duplicate module imports in `Diagnostics.tsx` and refactored template literals to standard string concatenation in `engine.ts` for consistency.
+
+Actions taken:
+- Removed `getOutgoing` from `src/utils/routing.ts`.
+- Removed global `db` export from `src/utils/db.ts`.
+- Combined imports in `Diagnostics.tsx` and refactored template strings in `engine.ts`.
+- Verified tsc build and all 45 unit tests pass cleanly.
