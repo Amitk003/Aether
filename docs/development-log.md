@@ -357,3 +357,8 @@ Actions taken:
 - Fixed Time-Domain Overlap Signal Distortion:
   - Refactored `AudioReceiver` to capture sample frames using a `ScriptProcessorNode` instead of an unstable `requestAnimationFrame` render loop, providing the Goertzel filter with a continuous, non-overlapping signal.
   - Verified: All 54 unit tests pass, tsc build compiles cleanly.
+- Fixed Visual Handshake Deadlock:
+  - Introduced a two-step confirm transition button ("Start Message Transfer") in `FindPeer.tsx` during QR syncing.
+  - When Device A scans B's handshake QR, it turns off its camera scanner and shows a success checkmark, but keeps displaying its own Handshake QR on screen so B can finish scanning it.
+  - This prevents the race condition where one device transitions to showing its payload QR before the other device has a chance to scan its handshake QR.
+  - Verified: All 54 unit tests pass, tsc build compiles cleanly.

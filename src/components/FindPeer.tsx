@@ -8,9 +8,12 @@ function FindPeer() {
   const [isScanning, setIsScanning] = useState(false);
   const [peers, setPeers] = useState<string[]>([]);
 
+  // Sync state
   const [syncPeerId, setSyncPeerId] = useState<string | null>(null);
   const [syncStep, setSyncStep] = useState<'handshake' | 'payload'>('handshake');
   const [ownHandshakeData, setOwnHandshakeData] = useState('');
+  const [handshakeScanned, setHandshakeScanned] = useState(false);
+  const [peerHandshakeData, setPeerHandshakeData] = useState<any>(null);
 
   const [outgoingQrData, setOutgoingQrData] = useState<string | null>(null);
   const [outgoingChunkInfo, setOutgoingChunkInfo] = useState('');
@@ -49,16 +52,18 @@ function FindPeer() {
 
     setSyncPeerId(peerId);
     setSyncStep('handshake');
+    setHandshakeScanned(false);
+    setPeerHandshakeData(null);
     setOutgoingQrData(null);
     setIncomingProgress('Scan peer handshake QR...');
 
     const handshake = await engine.getHandshakePayload();
     setOwnHandshakeData(handshake);
 
-      engine.optical.setOnChunk((received, total, progress) => {
-        setIncomingProgress('Scanning payload chunks: ' + received + '/' + total + ' (' + Math.round(progress * 100) + '%)');
-        engine.trackChunkReceived();
-      });
+    engine.optical.setOnChunk((received, total, progress) => {
+      setIncomingProgress('Scanning payload chunks: ' + received + '/' + total + ' (' + Math.round(progress * 100) + '%)');
+      engine.trackChunkReceived();
+    });
 
     engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
       try {
@@ -81,31 +86,39 @@ function FindPeer() {
     const engine = getEngine();
 
     if (syncStep === 'handshake') {
+      if (handshakeScanned) return;
       try {
         const peerHandshake = await engine.registerPeerHandshake(scannedText);
-
-        setSyncStep('payload');
-        setIncomingProgress('Handshake OK. Align screens for payload transfer...');
-
-        const outPayload = engine.generateOutgoingPayload(
-          peerHandshake.seenMessageIds,
-          peerHandshake.nodeId,
-          peerHandshake.predictability
-        );
-
-        engine.optical.setOnFrame((qrData, chunk) => {
-          setOutgoingQrData(qrData);
-          setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
-          engine.trackChunkSent();
-        });
-
-        engine.optical.startSending(outPayload);
+        setPeerHandshakeData(peerHandshake);
+        setHandshakeScanned(true);
+        setIncomingProgress('Handshake scanned! Point your screen to the peer so they can scan yours, then click "Start Transfer".');
       } catch (err: any) {
         console.error('Handshake scan error:', err);
       }
     } else {
       engine.optical.submitFrame(scannedText);
     }
+  };
+
+  const handleStartPayloadTransfer = () => {
+    if (!peerHandshakeData) return;
+    const engine = getEngine();
+    setSyncStep('payload');
+    setIncomingProgress('Scanning incoming message chunks...');
+
+    const outPayload = engine.generateOutgoingPayload(
+      peerHandshakeData.seenMessageIds,
+      peerHandshakeData.nodeId,
+      peerHandshakeData.predictability
+    );
+
+    engine.optical.setOnFrame((qrData, chunk) => {
+      setOutgoingQrData(qrData);
+      setOutgoingChunkInfo('Sending chunk ' + (chunk.index + 1) + '/' + chunk.total);
+      engine.trackChunkSent();
+    });
+
+    engine.optical.startSending(outPayload);
   };
 
   const handleCancelSync = () => {
@@ -116,6 +129,8 @@ function FindPeer() {
     setOutgoingQrData(null);
     setOutgoingChunkInfo('');
     setIncomingProgress('Waiting to scan...');
+    setHandshakeScanned(false);
+    setPeerHandshakeData(null);
   };
 
   if (state.phase === 'transferring' && syncPeerId) {
@@ -157,13 +172,29 @@ function FindPeer() {
             <p style={{ color: 'var(--text-primary)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '12px' }}>
               Your Camera (Scan peer screen)
             </p>
-            <div style={{ width: '100%', maxWidth: '280px' }}>
-              <QrScanner active={true} onScan={handleScan} />
-            </div>
+            {syncStep === 'handshake' && handshakeScanned ? (
+              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--accent)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>✓</div>
+                <p style={{ fontSize: '0.85rem', fontWeight: 600 }}>Handshake Captured Successfully</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                  Wait for the peer to scan your handshake, then both tap "Start Message Transfer".
+                </p>
+              </div>
+            ) : (
+              <div style={{ width: '100%', maxWidth: '280px' }}>
+                <QrScanner active={true} onScan={handleScan} />
+              </div>
+            )}
             <p style={{ color: 'var(--accent)', fontSize: '0.8rem', fontWeight: 500, marginTop: '12px', textAlign: 'center' }}>
               {incomingProgress}
             </p>
           </div>
+
+          {syncStep === 'handshake' && handshakeScanned && (
+            <button onClick={handleStartPayloadTransfer} className="btn-primary" style={{ width: '100%' }}>
+              Start Message Transfer
+            </button>
+          )}
 
           <button onClick={handleCancelSync} className="btn-danger" style={{ width: '100%' }}>
             Cancel Sync
