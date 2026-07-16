@@ -48,7 +48,6 @@ export class AudioReceiver {
     this.analyser.fftSize = config.fftSize;
     this.source.connect(this.analyser);
 
-    // Pre-allocate buffer once to ensure zero heap allocations inside the 60fps render loop
     this.staticBuffer = new Float32Array(this.analyser.frequencyBinCount * this.BUFFER_TARGET);
 
     this.isActive = true;
@@ -87,12 +86,11 @@ export class AudioReceiver {
     const bufferLength = this.analyser.frequencyBinCount;
     const offset = this.bufferSize * bufferLength;
     
-    // Write directly into the pre-allocated slice of our static buffer
-    this.analyser.getFloatTimeDomainData(this.staticBuffer.subarray(offset, offset + bufferLength) as any);
+    this.analyser.getFloatTimeDomainData(this.staticBuffer.subarray(offset, offset + bufferLength) as Float32Array<ArrayBuffer>);
     this.bufferSize++;
 
     if (this.bufferSize >= this.BUFFER_TARGET) {
-      this.processFrame(this.staticBuffer as any, config);
+      this.processFrame(this.staticBuffer, config);
       this.bufferSize = 0;
     }
 
@@ -120,10 +118,11 @@ export class AudioReceiver {
       }
 
       // Check spacer frequency (symbol transition index 16)
+      // Use lower threshold since spacer signal may only partially fill the processing frame
       const spacerFreq = config.baseFreq + 16 * config.stepFreq;
       const spacerPower = detectFrequency(samples, spacerFreq, config.sampleRate);
 
-      if (spacerPower > threshold) {
+      if (spacerPower > 0.3) {
         this.lastRegisteredSymbol = null; // Reset for next symbol
         this.consecutiveSilence = 0;
         return;

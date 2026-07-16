@@ -79,7 +79,7 @@ export class AudioTransmitter {
     tones.push({ freq: config.preambleFreq, duration: config.preambleDuration });
 
     const spacerFreq = config.baseFreq + 16 * config.stepFreq;
-    const spacerDuration = 60; // 60ms is sufficient for Goertzel detection
+    const spacerDuration = 80; // 80ms ensures at least ~86% of the processing frame has spacer signal
 
     for (const char of nodeId) {
       const hexVal = parseInt(char, 16);
