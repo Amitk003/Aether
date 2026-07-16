@@ -72,6 +72,10 @@ textarea {
   border: 1px solid var(--border);
 }
 
+.card + .card {
+  margin-top: 10px;
+}
+
 .card-empty {
   text-align: center;
   padding: 40px 20px;
@@ -101,12 +105,15 @@ textarea {
   animation: pulse 2s infinite;
 }
 
-.section-card {
-  padding: 12px;
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 16px;
   background-color: var(--bg-secondary);
   border-radius: 8px;
   border: 1px solid var(--border);
-  margin-bottom: 10px;
 }
 
 .section-row {

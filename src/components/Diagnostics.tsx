@@ -5,7 +5,7 @@ function Diagnostics() {
         Diagnostics
       </h2>
 
-      <div className="section-card">
+      <div className="card">
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           Audio
         </p>
@@ -19,7 +19,7 @@ function Diagnostics() {
         </div>
       </div>
 
-      <div className="section-card">
+      <div className="card">
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           Camera
         </p>
@@ -29,7 +29,7 @@ function Diagnostics() {
         </div>
       </div>
 
-      <div className="section-card">
+      <div className="card">
         <p style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
           Storage
         </p>

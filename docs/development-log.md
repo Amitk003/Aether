@@ -119,6 +119,21 @@ Actions taken:
 - Refactored `Inbox.tsx`, `Outbox.tsx`, `FindPeer.tsx`, and `Diagnostics.tsx` to use `className` selectors instead of large local JS style objects, shrinking their file sizes by ~40%.
 - Verified all builds and tests pass.
 
+### Code review fixes - Part 5
+
+Issues found and fixed:
+
+1. FindPeer.tsx still had mixed inline style on the status card: `<div className="card" style={{ display: 'flex', ... }}>`. Moved to a dedicated `.status-card` CSS class.
+2. `.section-card` was a near-duplicate of `.card` (only difference was margin-bottom). Removed `.section-card`, replaced with `.card + .card` spacing rule.
+3. Diagnostics.tsx was using `.section-card`; switched to `.card`.
+
+Actions taken:
+- Added `.status-card` class to index.css
+- Added `.card + .card` margin rule (replaces explicit margin on each card)
+- Removed `.section-card` class
+- Updated FindPeer.tsx and Diagnostics.tsx
+- Build passes
+
 ## Next: acoustic-basics branch
 
 Will implement pure-JS 2-tone FSK for device discovery and handshake.

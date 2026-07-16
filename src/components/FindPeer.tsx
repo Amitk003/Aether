@@ -5,7 +5,7 @@ function FindPeer() {
         Find Peer
       </h2>
 
-      <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+      <div className="status-card">
         <div className="pulse-dot" />
         <div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
