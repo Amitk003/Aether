@@ -8,6 +8,9 @@ export class AudioTransmitter {
 
   async start(): Promise<void> {
     this.ctx = new AudioContext();
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
     this.gain = this.ctx.createGain();
     this.gain.gain.value = 0.3;
     this.gain.connect(this.ctx.destination);
