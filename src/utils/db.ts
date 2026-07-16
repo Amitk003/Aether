@@ -59,10 +59,12 @@ export class AetherDB extends Dexie {
   }
 
   async deleteExpiredMessages(): Promise<number> {
-    const expired = await this.getExpiredMessages();
-    const ids = expired.map((m) => m.id);
-    await this.messages.bulkDelete(ids);
-    return ids.length;
+    const now = Date.now();
+    return this.messages
+      .where('ttl')
+      .belowOrEqual(now)
+      .and((m) => m.status === 'pending')
+      .delete();
   }
 
   async recordHandshake(handshake: Handshake): Promise<string> {
@@ -78,11 +80,11 @@ export class AetherDB extends Dexie {
   }
 
   async getHandshakesWithNode(nodeId: string): Promise<Handshake[]> {
-    return this.handshakes
+    const handshakes = await this.handshakes
       .where('nodeId')
       .equals(nodeId)
-      .reverse()
       .toArray();
+    return handshakes.sort((a, b) => b.timestamp - a.timestamp);
   }
 }
 

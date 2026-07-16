@@ -171,9 +171,9 @@ describe('AetherDB', () => {
     });
 
     it('should return handshakes for a specific node ordered by recency', async () => {
-      const hs1: Handshake = { id: 'hs-1', nodeId: 'node-1', timestamp: 100, messagesExchanged: 1 };
-      const hs2: Handshake = { id: 'hs-2', nodeId: 'node-1', timestamp: 200, messagesExchanged: 2 };
-      const hs3: Handshake = { id: 'hs-3', nodeId: 'node-2', timestamp: 300, messagesExchanged: 3 };
+      const hs1: Handshake = { id: 'hs-b', nodeId: 'node-1', timestamp: 100, messagesExchanged: 1 };
+      const hs2: Handshake = { id: 'hs-a', nodeId: 'node-1', timestamp: 200, messagesExchanged: 2 };
+      const hs3: Handshake = { id: 'hs-c', nodeId: 'node-2', timestamp: 300, messagesExchanged: 3 };
 
       await db.recordHandshake(hs1);
       await db.recordHandshake(hs2);
@@ -181,7 +181,8 @@ describe('AetherDB', () => {
 
       const results = await db.getHandshakesWithNode('node-1');
       expect(results).toHaveLength(2);
-      expect(results[0].id).toBe('hs-2');
+      expect(results[0].id).toBe('hs-a');
+      expect(results[1].id).toBe('hs-b');
     });
   });
 });

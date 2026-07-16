@@ -83,6 +83,19 @@ Fixes:
 - Wrote 9 tests covering all store operations (all passing)
 - Verified tsc and vite build pass
 
+### Code review fixes - Part 3
+
+Issues found and fixed during code review:
+
+1. Handshake sorting bug: `getHandshakesWithNode` originally called `.where('nodeId').equals(nodeId).reverse()`, which reversed the primary key index instead of sorting by `timestamp`. Fixed by sorting the handshakes in-memory based on timestamp descending: `.sort((a, b) => b.timestamp - a.timestamp)`.
+2. deleteExpiredMessages in-memory bloat: Optimized by using Dexie's native `.delete()` method on the collection query. This avoids loading expired message objects into JS memory, mapping IDs, and running `bulkDelete` (reducing heap allocations).
+3. Enhanced unit tests: Updated `db.test.ts` to assign non-sequential alphabetical IDs to handshakes in the recency test, ensuring that sorting is strictly verified on `timestamp` and is independent of alphabetical ID ordering.
+
+Actions taken:
+- Updated `deleteExpiredMessages` and `getHandshakesWithNode` in `src/utils/db.ts`.
+- Updated handshake recency test in `src/utils/db.test.ts`.
+- Verified all unit tests and builds pass.
+
 ## Next: ui-shell branch
 
 Will create the dark UI dashboard with Inbox, Outbox, and Find Peer panels.
