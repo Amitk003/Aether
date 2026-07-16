@@ -8,14 +8,9 @@ export class AudioReceiver {
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
   private analyser: AnalyserNode | null = null;
+  private scriptNode: ScriptProcessorNode | null = null;
   private isActive = false;
-  private animFrameId: number | null = null;
   private onBeacon: BeaconCallback | null = null;
-
-  // Zero-allocation buffer pooling
-  private staticBuffer: Float32Array | null = null;
-  private bufferSize = 0;
-  private readonly BUFFER_TARGET = 4;
 
   private lastDecodeTime = 0;
   private readonly DECODE_COOLDOWN = 2000;
@@ -34,6 +29,10 @@ export class AudioReceiver {
     if (this.isActive) return;
 
     this.ctx = new AudioContext();
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume();
+    }
+
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         sampleRate: config.sampleRate,
@@ -49,53 +48,46 @@ export class AudioReceiver {
     this.analyser.smoothingTimeConstant = 0.8;
     this.source.connect(this.analyser);
 
-    this.staticBuffer = new Float32Array(this.analyser.frequencyBinCount * this.BUFFER_TARGET);
+    // Create ScriptProcessorNode for stable, continuous time-domain processing
+    this.scriptNode = this.ctx.createScriptProcessor(4096, 1, 1);
+    this.scriptNode.onaudioprocess = (event: AudioProcessingEvent) => {
+      if (!this.isActive) return;
+      const samples = event.inputBuffer.getChannelData(0);
+      this.processFrame(samples, config);
+    };
+
+    this.source.connect(this.scriptNode);
+    this.scriptNode.connect(this.ctx.destination);
 
     this.isActive = true;
     this.resetState();
-    this.poll(config);
   }
 
   stop(): void {
     this.isActive = false;
-    if (this.animFrameId !== null) {
-      cancelAnimationFrame(this.animFrameId);
-      this.animFrameId = null;
-    }
+    
+    this.scriptNode?.disconnect();
+    this.scriptNode = null;
+    
     this.source?.disconnect();
     this.source = null;
+    
+    this.analyser?.disconnect();
     this.analyser = null;
+    
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
+    
     this.ctx?.close();
     this.ctx = null;
-    this.staticBuffer = null;
   }
 
   private resetState(): void {
-    this.bufferSize = 0;
     this.preamblePower = 0;
     this.receivedTones = [];
     this.readingData = false;
     this.consecutiveSilence = 0;
     this.lastRegisteredSymbol = null;
-  }
-
-  private poll(config: AcousticConfig): void {
-    if (!this.isActive || !this.analyser || !this.staticBuffer) return;
-
-    const bufferLength = this.analyser.frequencyBinCount;
-    const offset = this.bufferSize * bufferLength;
-    
-    this.analyser.getFloatTimeDomainData(this.staticBuffer.subarray(offset, offset + bufferLength) as Float32Array<ArrayBuffer>);
-    this.bufferSize++;
-
-    if (this.bufferSize >= this.BUFFER_TARGET) {
-      this.processFrame(this.staticBuffer, config);
-      this.bufferSize = 0;
-    }
-
-    this.animFrameId = requestAnimationFrame(() => this.poll(config));
   }
 
   private processFrame(samples: Float32Array, config: AcousticConfig): void {

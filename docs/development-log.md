@@ -352,3 +352,8 @@ Actions taken:
 - Added Unit Test:
   - Wrote a Vitest case in `routing.test.ts` to assert that messages are only routed when the peer has higher predictability.
   - Verified: All 54 unit tests pass, tsc build compiles cleanly.
+- Fixed Web Audio Context Autoplay Blocks:
+  - Added `ctx.resume()` calls to both `AudioTransmitter.start` and `AudioReceiver.start` to ensure that browsers do not leave the audio nodes in a suspended state.
+- Fixed Time-Domain Overlap Signal Distortion:
+  - Refactored `AudioReceiver` to capture sample frames using a `ScriptProcessorNode` instead of an unstable `requestAnimationFrame` render loop, providing the Goertzel filter with a continuous, non-overlapping signal.
+  - Verified: All 54 unit tests pass, tsc build compiles cleanly.
