@@ -92,7 +92,7 @@ export class AudioReceiver {
 
   private processFrame(samples: Float32Array, config: AcousticConfig): void {
     const preamblePower = detectFrequency(samples, config.preambleFreq, config.sampleRate);
-    const threshold = 0.5;
+    const threshold = 0.1;
 
     // Detect Preamble (Discovery Start)
     if (!this.readingData && preamblePower > threshold) {
@@ -115,7 +115,7 @@ export class AudioReceiver {
       const spacerFreq = config.baseFreq + 16 * config.stepFreq;
       const spacerPower = detectFrequency(samples, spacerFreq, config.sampleRate);
 
-      if (spacerPower > 0.3) {
+      if (spacerPower > 0.05) {
         this.lastRegisteredSymbol = null; // Reset for next symbol
         this.consecutiveSilence = 0;
         return;

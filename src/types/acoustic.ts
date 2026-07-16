@@ -17,13 +17,13 @@ export interface AcousticConfig {
 }
 
 export const DEFAULT_ACOUSTIC_CONFIG: AcousticConfig = {
-  preambleFreq: 18000,
-  preambleDuration: 300,
-  toneDuration: 120,
-  endFreq: 19500,
-  endDuration: 200,
-  baseFreq: 18000,
-  stepFreq: 100,
+  preambleFreq: 1500,
+  preambleDuration: 200,
+  toneDuration: 80,
+  endFreq: 2500,
+  endDuration: 150,
+  baseFreq: 1600,
+  stepFreq: 50,
   sampleRate: 44100,
   fftSize: 2048,
 };
