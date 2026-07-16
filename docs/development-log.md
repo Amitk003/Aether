@@ -174,6 +174,18 @@ Actions taken:
 - All tests pass (including 6+9+9 from all modules running on main)
 - Verified tsc and vite build pass
 
+### Code review fixes - Part 7
+
+Issues found and fixed during code review:
+
+1. Blocked Private Key Export: The private key was generated and imported with `extractable` set to `false`. While secure against script exfiltration, it completely blocked the `exportPrivateKey` function from functioning, throwing `DOMException` on call. This made account backups/recovery impossible. Fixed by enabling `extractable: true` on private key creation and imports.
+2. Redundant Wrapper: Removed the local `getSubtle()` helper wrapper and directly accessed the globally available `crypto.subtle` API.
+
+Actions taken:
+- Updated `src/utils/crypto.ts` to make private keys extractable and call `crypto.subtle` directly.
+- Added a new unit test `exports and imports a private key as JWK successfully` in `src/utils/crypto.test.ts` to verify private key export/import works perfectly.
+- Verified all 25 unit tests and production builds pass.
+
 ## Next: routing branch
 
 Will implement epidemic flooding with a seen-message blacklist.

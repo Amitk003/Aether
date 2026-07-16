@@ -8,17 +8,13 @@ const HASH = 'SHA-256';
 
 const IV_LENGTH = 12;
 
-function getSubtle(): SubtleCrypto {
-  return crypto.subtle;
-}
-
 export async function generateKeyPair(): Promise<KeyPair> {
-  const keyPair = await getSubtle().generateKey(
+  const keyPair = await crypto.subtle.generateKey(
     {
       name: ALGORITHM,
       namedCurve: CURVE,
     },
-    false,
+    true, // Set extractable to true to support private key backups/exports for user identity recovery
     ['deriveKey', 'deriveBits']
   );
 
@@ -26,12 +22,12 @@ export async function generateKeyPair(): Promise<KeyPair> {
 }
 
 export async function exportPublicKey(key: CryptoKey): Promise<JsonWebKey> {
-  const jwk = await getSubtle().exportKey('jwk', key);
+  const jwk = await crypto.subtle.exportKey('jwk', key);
   return jwk;
 }
 
 export async function importPublicKey(jwk: JsonWebKey): Promise<CryptoKey> {
-  const key = await getSubtle().importKey(
+  const key = await crypto.subtle.importKey(
     'jwk',
     jwk,
     {
@@ -46,19 +42,19 @@ export async function importPublicKey(jwk: JsonWebKey): Promise<CryptoKey> {
 }
 
 export async function exportPrivateKey(key: CryptoKey): Promise<JsonWebKey> {
-  const jwk = await getSubtle().exportKey('jwk', key);
+  const jwk = await crypto.subtle.exportKey('jwk', key);
   return jwk;
 }
 
 export async function importPrivateKey(jwk: JsonWebKey): Promise<CryptoKey> {
-  const key = await getSubtle().importKey(
+  const key = await crypto.subtle.importKey(
     'jwk',
     jwk,
     {
       name: ALGORITHM,
       namedCurve: CURVE,
     },
-    false,
+    true, // Set extractable to true to support private key backups/exports
     ['deriveKey', 'deriveBits']
   );
 
@@ -69,7 +65,7 @@ export async function deriveSharedSecret(
   privateKey: CryptoKey,
   publicKey: CryptoKey
 ): Promise<ArrayBuffer> {
-  const sharedBits = await getSubtle().deriveBits(
+  const sharedBits = await crypto.subtle.deriveBits(
     {
       name: ALGORITHM,
       public: publicKey,
@@ -82,7 +78,7 @@ export async function deriveSharedSecret(
 }
 
 async function deriveEncryptionKey(sharedSecret: ArrayBuffer): Promise<CryptoKey> {
-  const keyMaterial = await getSubtle().importKey(
+  const keyMaterial = await crypto.subtle.importKey(
     'raw',
     sharedSecret,
     'HKDF',
@@ -93,7 +89,7 @@ async function deriveEncryptionKey(sharedSecret: ArrayBuffer): Promise<CryptoKey
   const salt = new Uint8Array(16);
   const info = new TextEncoder().encode('aether-encryption-v1');
 
-  const aesKey = await getSubtle().deriveKey(
+  const aesKey = await crypto.subtle.deriveKey(
     {
       name: 'HKDF',
       hash: HASH,
@@ -119,7 +115,7 @@ export async function encryptMessage(
   const aesKey = await deriveEncryptionKey(sharedSecret);
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
 
-  const ciphertext = await getSubtle().encrypt(
+  const ciphertext = await crypto.subtle.encrypt(
     {
       name: ENCRYPTION,
       iv,
@@ -136,10 +132,9 @@ export async function decryptMessage(
   encrypted: EncryptedMessage
 ): Promise<ArrayBuffer> {
   const aesKey = await deriveEncryptionKey(sharedSecret);
-
   const ivCopy = new Uint8Array(encrypted.iv);
 
-  const plaintext = await getSubtle().decrypt(
+  const plaintext = await crypto.subtle.decrypt(
     {
       name: ENCRYPTION,
       iv: ivCopy,

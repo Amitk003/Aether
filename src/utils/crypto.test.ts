@@ -3,6 +3,8 @@ import {
   generateKeyPair,
   exportPublicKey,
   importPublicKey,
+  exportPrivateKey,
+  importPrivateKey,
   deriveSharedSecret,
   encryptMessage,
   decryptMessage,
@@ -138,5 +140,17 @@ describe('crypto', () => {
     const encrypted = await encryptMessage(aliceSecret, plaintext);
     const decrypted = await decryptMessage(bobSecret, encrypted);
     expect(new TextDecoder().decode(decrypted)).toBe('export round-trip works');
+  });
+
+  it('exports and imports a private key as JWK successfully', async () => {
+    const keyPair = await generateKeyPair();
+    const jwk = await exportPrivateKey(keyPair.privateKey);
+    expect(jwk.kty).toBe('EC');
+    expect(jwk.crv).toBe('P-256');
+    expect(jwk.d).toBeDefined(); // Secret parameter 'd' must exist in private JWK
+
+    const imported = await importPrivateKey(jwk);
+    expect(imported.type).toBe('private');
+    expect(imported.usages).toContain('deriveBits');
   });
 });
