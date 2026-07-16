@@ -186,33 +186,31 @@ Actions taken:
 - Added a new unit test `exports and imports a private key as JWK successfully` in `src/utils/crypto.test.ts` to verify private key export/import works perfectly.
 - Verified all 25 unit tests and production builds pass.
 
-## Next: routing branch
+## routing branch
 
-Will implement epidemic flooding with a seen-message blacklist.
-- Created src/utils/chunker.ts: split/reconstruct payloads with XOR checksum verification
-- Created src/types/optical.ts: DataChunk, TransferSession, OpticalConfig types
-- Created src/utils/optical-tx.ts: OpticalTransmitter with configurable frame interval
-- Created src/utils/optical-rx.ts: OpticalReceiver with dedup cache and progress tracking
-- Created src/utils/optical.ts: High-level service combining tx/rx
-- Created src/components/QrDisplay.tsx: Renders QR code to dark canvas via qrcode package
-- Created src/components/QrScanner.tsx: Camera scanner using html5-qrcode with permission handling
-- Added @types/qrcode for type definitions
-- Created src/types/html5-qrcode.d.ts (no @types package available)
-- Wrote 9 chunker tests: split, encode, decode, corrupt-checksum, reconstruct, out-of-order, empty, single-byte
-- All 24 tests pass, tsc and vite build pass
+- Implemented epidemic flooding routing engine (RoutingEngine class)
+  - Seen set of message IDs to prevent re-delivery
+  - Pending outbox for undelivered messages
+  - getOutgoingForPeer(peerSeen) computes difference of seen sets
+  - receiveFromPeer handles inbound with multi-hop forwarding
+  - MAX_HOPS = 10 prevents infinite routing loops
+  - getSummary/applySummary for anti-entropy sync between peers
+- Created src/types/routing.ts: OutgoingMessage, ExchangeSummary, ExchangeAction
+- Created src/utils/routing.ts: RoutingEngine class
+- Wrote 11 tests: enqueue, dedup, peer transfer filter, self-delivery, forward, hop limit, duplicate rejection, delivery confirmation, summary sync, clear
+- All 45 tests pass, tsc and vite build pass
+## Next: integration branch
 
-### Code review fixes - Part 6
+Will wire up the state machine connecting all modules (acoustic + optical + crypto + routing + storage).
+
+### Code review fixes - Part 8
 
 Issues found and fixed during code review:
 
-1. Dynamic Import in 10fps Loop: `QrDisplay.tsx` dynamically imported `qrcode` inside the `useEffect` render hook which triggers every 100ms when `data` updates. This caused asynchronous Promise-evaluation overhead. Fixed by statically importing `qrcode` at the top of the file, making the canvas draw operations 100% synchronous and flicker-free.
-2. Chunker Stack Overflow Risk: `chunker.ts` converted byte buffers to strings using the spread operator (`...combined`), which can trigger stack overflows on large chunks. Refactored `encodeChunk` to build the binary string using a standard, stack-safe loop.
+1. The Anti-Entropy Payload Lock-Out Bug: The `applySummary` method merged a peer's seen message IDs directly into our own `seen` set. If we synced summaries *before* receiving the actual message payloads, the node would record them as seen, causing it to silently drop the actual payloads when they arrived. Fixed by removing `applySummary()` and updating the sync protocol to only filter outbox transmissions using peer summaries on-the-fly.
+2. Missing Inbox Payload Delivery API: `receiveFromPeer()` previously discarded received payloads of messages addressed to the local node from the returned forwarding array, making it impossible for the caller to save incoming messages to the Inbox database. Fixed by refactoring the method to return an object `{ received: ExchangeAction[], forward: ExchangeAction[] }`.
 
 Actions taken:
-- Updated `src/components/QrDisplay.tsx` to statically import `qrcode`.
-- Updated `encodeChunk` in `src/utils/chunker.ts`.
-- Verified all 24 unit tests and production builds pass.
-
-## Next: crypto branch
-
-Will implement ECC key generation, ECDH key exchange, and AES-GCM encryption.
+- Refactored `RoutingEngine` in `src/utils/routing.ts` to return both `received` and `forward` messages, and removed `applySummary()`.
+- Updated unit tests in `src/utils/routing.test.ts` to assert on the new object return types and test the correct anti-entropy flow.
+- Verified all 45 unit tests and production builds pass.
