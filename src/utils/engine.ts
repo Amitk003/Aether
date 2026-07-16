@@ -280,12 +280,6 @@ export class AetherEngine {
   generateOutgoingPayload(peerSeenIds: string[]): Uint8Array {
     const peerSeen = new Set(peerSeenIds);
     const actions = this.routing.getOutgoingForPeer(peerSeen);
-    
-    // Mark these as delivered in our local outbox so we don't try to send them again
-    for (const action of actions) {
-      this.routing.confirmDelivered(action.messageId);
-      this.db.markDelivered(action.messageId).catch(() => {});
-    }
 
     const payloadText = JSON.stringify(actions);
     return new TextEncoder().encode(payloadText);

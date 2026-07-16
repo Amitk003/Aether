@@ -120,8 +120,41 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
   font-size: 0.85rem;
+}
+
+.section-row:last-child {
+  border-bottom: none;
+}
+
+.section-label {
+  color: var(--text-secondary);
+}
+
+.section-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.card-section-title {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.status-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: var(--border);
+  color: var(--text-secondary);
+}
+
+.status-badge-ok {
+  background-color: var(--accent-dim);
+  color: var(--accent);
 }
 
 .btn-primary {
