@@ -134,6 +134,19 @@ Actions taken:
 - Updated FindPeer.tsx and Diagnostics.tsx
 - Build passes
 
-## Next: acoustic-basics branch
+## acoustic-basics branch
 
-Will implement pure-JS 2-tone FSK for device discovery and handshake.
+- Implemented pure-JS acoustic beacon using Web Audio API (no WASM)
+- Created Goertzel algorithm for efficient single-tone detection (src/utils/goertzel.ts)
+- Created AudioTransmitter using OscillatorNode (src/utils/audio-tx.ts)
+- Created AudioReceiver using AnalyserNode + getUserMedia (src/utils/audio-rx.ts)
+- Created AcousticService high-level service with beacon interval (src/utils/acoustic.ts)
+- Protocol: 18kHz preamble (300ms), hex-encoded node ID as 18.0-19.5kHz tones (120ms each), 19.5kHz end marker
+- Wrote 6 Goertzel tests with synthetic sine waves (all passing)
+- AudioReceiver uses strict constraints (no AGC, no echo cancel, no noise suppression)
+- Verified tsc and vite build pass
+- Note: wirehair-wasm is NOT included (Windows postinstall uses rm -rf). Using pure-JS LT code fallback if needed.
+
+## Next: optical-basics branch
+
+Will implement chunk-carousel QR transfer for message payloads.
