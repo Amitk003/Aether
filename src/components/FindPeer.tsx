@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getEngine, useAether } from '../hooks/useAether';
 import QrDisplay from './QrDisplay';
 import QrScanner from './QrScanner';
@@ -18,6 +18,9 @@ function FindPeer() {
   const [outgoingQrData, setOutgoingQrData] = useState<string | null>(null);
   const [outgoingChunkInfo, setOutgoingChunkInfo] = useState('');
   const [incomingProgress, setIncomingProgress] = useState('Waiting to scan...');
+
+  // Ref to track the current active peer ID across state closure updates
+  const activePeerIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const engine = getEngine();
@@ -50,6 +53,7 @@ function FindPeer() {
     engine.stopDiscovery();
     setIsScanning(false);
 
+    activePeerIdRef.current = peerId;
     setSyncPeerId(peerId);
     setSyncStep('handshake');
     setHandshakeScanned(false);
@@ -67,8 +71,54 @@ function FindPeer() {
 
     engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
       try {
+        const activePeerId = activePeerIdRef.current;
+        if (!activePeerId || activePeerId === 'pending_direct_scan') {
+          throw new Error('No active peer Node ID bound to sync session');
+        }
         setIncomingProgress('Reconstructing and decrypting messages...');
-        await engine.processIncomingPayload(peerId, payloadBytes);
+        await engine.processIncomingPayload(activePeerId, payloadBytes);
+        engine.trackTransferComplete();
+        alert('Sync completed successfully!');
+      } catch (err: any) {
+        alert('Sync processing failed: ' + err.message);
+      } finally {
+        handleCancelSync();
+      }
+    });
+
+    engine.setPhase('transferring');
+    engine.optical.startReceiving();
+  };
+
+  const handleStartDirectSync = async () => {
+    const engine = getEngine();
+    engine.stopDiscovery();
+    setIsScanning(false);
+
+    activePeerIdRef.current = 'pending_direct_scan';
+    setSyncPeerId('pending_direct_scan');
+    setSyncStep('handshake');
+    setHandshakeScanned(false);
+    setPeerHandshakeData(null);
+    setOutgoingQrData(null);
+    setIncomingProgress('Scan peer handshake QR...');
+
+    const handshake = await engine.getHandshakePayload();
+    setOwnHandshakeData(handshake);
+
+    engine.optical.setOnChunk((received, total, progress) => {
+      setIncomingProgress('Scanning payload chunks: ' + received + '/' + total + ' (' + Math.round(progress * 100) + '%)');
+      engine.trackChunkReceived();
+    });
+
+    engine.optical.setOnReceiveComplete(async (payloadBytes: Uint8Array) => {
+      try {
+        const activePeerId = activePeerIdRef.current;
+        if (!activePeerId || activePeerId === 'pending_direct_scan') {
+          throw new Error('No active peer Node ID bound to sync session');
+        }
+        setIncomingProgress('Reconstructing and decrypting messages...');
+        await engine.processIncomingPayload(activePeerId, payloadBytes);
         engine.trackTransferComplete();
         alert('Sync completed successfully!');
       } catch (err: any) {
@@ -91,6 +141,10 @@ function FindPeer() {
         const peerHandshake = await engine.registerPeerHandshake(scannedText);
         setPeerHandshakeData(peerHandshake);
         setHandshakeScanned(true);
+        activePeerIdRef.current = peerHandshake.nodeId;
+        if (syncPeerId === 'pending_direct_scan') {
+          setSyncPeerId(peerHandshake.nodeId);
+        }
         setIncomingProgress('Handshake scanned! Point your screen to the peer so they can scan yours, then click "Start Transfer".');
       } catch (err: any) {
         console.error('Handshake scan error:', err);
@@ -131,13 +185,15 @@ function FindPeer() {
     setIncomingProgress('Waiting to scan...');
     setHandshakeScanned(false);
     setPeerHandshakeData(null);
+    activePeerIdRef.current = null;
   };
 
   if (state.phase === 'transferring' && syncPeerId) {
+    const displayPeerName = syncPeerId === 'pending_direct_scan' ? 'Direct QR Sync' : syncPeerId.slice(0, 12);
     return (
       <div>
         <h2 style={{ fontSize: '1.1rem', marginBottom: '12px', color: 'var(--text-primary)' }}>
-          Syncing with {syncPeerId.slice(0, 12)}
+          Syncing: {displayPeerName}
         </h2>
 
         <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'center' }}>
@@ -210,13 +266,22 @@ function FindPeer() {
         Find Peer
       </h2>
 
-      <button
-        onClick={handleToggle}
-        className={isScanning ? 'btn-danger' : 'btn-primary'}
-        style={{ width: '100%', marginBottom: '16px' }}
-      >
-        {isScanning ? 'Stop Scanning' : 'Start Scanning'}
-      </button>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+        <button
+          onClick={handleToggle}
+          className={isScanning ? 'btn-danger' : 'btn-primary'}
+          style={{ flex: 1 }}
+        >
+          {isScanning ? 'Stop Scanning' : 'Start Scanning'}
+        </button>
+        <button
+          onClick={handleStartDirectSync}
+          className="btn-primary"
+          style={{ flex: 1, backgroundColor: 'var(--accent)', color: 'var(--bg-primary)' }}
+        >
+          Scan QR to Sync
+        </button>
+      </div>
 
       <div className="status-card">
         {isScanning && <div className="pulse-dot" />}
@@ -276,10 +341,9 @@ function FindPeer() {
           How to connect
         </p>
         <ol style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.6, paddingLeft: '20px' }}>
-          <li>Make sure both devices have the app open</li>
-          <li>Keep the devices near each other</li>
-          <li>Wait for the app to detect the other device</li>
-          <li>Align the screens when prompted to scan</li>
+          <li>Tap "Scan QR to Sync" on both devices</li>
+          <li>Point the cameras at the QR codes shown on the opposite screens</li>
+          <li>Once handshakes verify, tap "Start Message Transfer" to sync!</li>
         </ol>
       </div>
     </div>
