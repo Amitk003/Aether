@@ -282,3 +282,13 @@ Actions taken:
 - Removed outbox deletion inside `generateOutgoingPayload()` in `src/utils/engine.ts`.
 - Updated `Diagnostics.tsx` and `src/index.css` to use CSS classes.
 - Verified tsc build and all 45 unit tests pass cleanly.
+
+### Code review fixes - Part 13
+
+Issues found and fixed during code review:
+
+1. Merge Conflict Duplications: Cleaned up leftover duplications from branch merges across `Diagnostics.tsx`, `FindPeer.tsx`, `Inbox.tsx`, and `engine.ts` which were causing compilation issues.
+
+Actions taken:
+- Removed duplicate filter definitions, action loops, and state properties.
+- Verified tsc build and all 45 unit tests pass cleanly.
