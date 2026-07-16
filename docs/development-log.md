@@ -1,5 +1,26 @@
 # Development Log
 
+## code-cleanup branch
+
+- Removed unused `getOutgoing()` method from routing engine
+- Removed unused `export const db` singleton from db.ts
+- Replaced template literals with string concatenation in engine.ts
+- Combined duplicate imports in Diagnostics.tsx
+- Ran: npm run build, npm test
+- Pushed branch to remote
+
+## optical-flow branch
+
+- Created branch from main, cherry-picked 4 integration commits (engine, hook, types, FindPeer sync workflow, Inbox/Outbox/Diagnostics rewrites)
+- Tracked known peers properly in engine state (was hardcoded empty array)
+- Added JSON parse error handling in processIncomingPayload
+- Moved optical callbacks (setOnChunk, setOnReceiveComplete) to handleStartSync so they register once
+- Fixed empty outgoing QR data handling
+- PR merged to main via GitHub
+- Cleaned up merge conflict duplications (Inbox filter, FindPeer duplications, engine confirmDelivered/knownPeers, Diagnostics inline styles)
+- Ran: git cherry-pick, npm run build, npm test
+- Pushed branch to remote
+
 ## main branch
 
 - Initialized git repo
