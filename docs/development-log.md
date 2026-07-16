@@ -221,6 +221,12 @@ Actions taken:
 - Added CSS classes: .btn-primary, .btn-danger
 - All 45 tests pass, tsc and vite build pass
 
+### Code review fixes - Part 10
+
+Issues found and fixed during code review:
+
+1. Uint8Array JSON Serialization Bug: `generateOutgoingPayload` serializes `ExchangeAction[]` via `JSON.stringify`, which converts `Uint8Array` payloads into plain `number[]`. `processIncomingPayload` called `.subarray()` on the deserialized payload, which throws because `number[]` doesn't have a `subarray` method. Fixed by mapping deserialized actions through `new Uint8Array()` after `JSON.parse`.
+
 ## Project Complete
 
 All branches have been merged to main. The core Aether application is fully assembled:
