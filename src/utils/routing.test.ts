@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { RoutingEngine } from './routing';
 import type { OutgoingMessage } from '../types/routing';
 
@@ -138,5 +138,82 @@ describe('routing', () => {
     r.clear();
     expect(r.pendingCount).toBe(0);
     expect(r.seenCount).toBe(0);
+  });
+
+  describe('PRoPHET delivery predictability', () => {
+    it('starts with zero predictability for unknown peers', () => {
+      const r = new RoutingEngine();
+      expect(r.getPredictabilityFor('unknown')).toBe(0);
+    });
+
+    it('increases predictability on direct encounter', () => {
+      const r = new RoutingEngine();
+      r.recordEncounter('node-b');
+      const p = r.getPredictabilityFor('node-b');
+      expect(p).toBeGreaterThan(0);
+      expect(p).toBeLessThanOrEqual(0.75);
+    });
+
+    it('diminishing returns on repeated encounters', () => {
+      const r = new RoutingEngine();
+      for (let i = 0; i < 5; i++) {
+        r.recordEncounter('node-b');
+      }
+      const p = r.getPredictabilityFor('node-b');
+      expect(p).toBeCloseTo(0.75, 1);
+    });
+
+    it('returns messages sorted by predictability descending', () => {
+      const r = new RoutingEngine();
+      r.recordEncounter('node-a');
+      r.recordEncounter('node-a');
+      r.recordEncounter('node-c');
+
+      r.enqueue(makeMsg({ id: 'msg-a', recipientId: 'node-a' }));
+      r.enqueue(makeMsg({ id: 'msg-b', recipientId: 'node-b' }));
+      r.enqueue(makeMsg({ id: 'msg-c', recipientId: 'node-c' }));
+
+      const actions = r.getOutgoingForPeer(new Set());
+      expect(actions).toHaveLength(3);
+      expect(actions[0].recipientId).toBe('node-a');
+      expect(actions[2].recipientId).toBe('node-b');
+    });
+
+    it('includes predictability in getSummary', () => {
+      const r = new RoutingEngine();
+      r.recordEncounter('node-x');
+      const summary = r.getSummary('self');
+      expect(summary.predictability).toBeDefined();
+      expect(summary.predictability['node-x']).toBeGreaterThan(0);
+    });
+
+    it('clears predictability on clear', () => {
+      const r = new RoutingEngine();
+      r.recordEncounter('node-x');
+      r.clear();
+      expect(r.getPredictabilityFor('node-x')).toBe(0);
+    });
+
+    it('applies transitivity from peer', () => {
+      const r = new RoutingEngine();
+      r.recordEncounter('node-b');
+      r.applyTransitivity('node-b', { 'node-c': 0.7 });
+      const pAC = r.getPredictabilityFor('node-c');
+      expect(pAC).toBeGreaterThan(0);
+    });
+
+    it('aging decays predictability over time', async () => {
+      vi.useFakeTimers();
+      const r = new RoutingEngine();
+      r.recordEncounter('node-b');
+      const before = r.getPredictabilityFor('node-b');
+
+      vi.advanceTimersByTime(600000); // 10 minutes
+      r.recordEncounter('node-c'); // triggers ageAll
+
+      const after = r.getPredictabilityFor('node-b');
+      expect(after).toBeLessThan(before);
+      vi.useRealTimers();
+    });
   });
 });

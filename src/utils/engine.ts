@@ -71,11 +71,11 @@ export class AetherEngine {
       this.handlePeerDiscovered(msg.nodeId);
     });
 
-    this.db.upsertNode({
+    await this.db.upsertNode({
       id: this.nodeId,
       publicKey: await exportPublicKey(this.keyPair.publicKey),
       trustStatus: 'trusted',
-      deliveryPredictability: {},
+      deliveryPredictability: this.routing.getAllPredictability(),
       lastSeen: Date.now(),
     });
 
@@ -203,6 +203,7 @@ export class AetherEngine {
       nodeId: this.nodeId,
       publicKey: pubJwk,
       seenMessageIds: summary.seenMessageIds,
+      predictability: summary.predictability,
     });
   }
 
@@ -215,11 +216,17 @@ export class AetherEngine {
     }
 
     this.stats.peersEncountered++;
+
+    this.routing.recordEncounter(data.nodeId);
+    if (data.predictability) {
+      this.routing.applyTransitivity(data.nodeId, data.predictability);
+    }
+
     await this.db.upsertNode({
       id: data.nodeId,
       publicKey: data.publicKey,
       trustStatus: 'trusted',
-      deliveryPredictability: {},
+      deliveryPredictability: this.routing.getAllPredictability(),
       lastSeen: Date.now(),
     });
 
@@ -326,6 +333,14 @@ export class AetherEngine {
   private async handlePeerDiscovered(peerId: string): Promise<void> {
     this.stats.peersEncountered++;
     this.knownPeers.add(peerId);
+    this.routing.recordEncounter(peerId);
+    await this.db.upsertNode({
+      id: peerId,
+      publicKey: {} as JsonWebKey,
+      trustStatus: 'trusted',
+      deliveryPredictability: this.routing.getAllPredictability(),
+      lastSeen: Date.now(),
+    });
     this.peerListeners.forEach((l) => l(peerId));
     this.notifyState();
   }
